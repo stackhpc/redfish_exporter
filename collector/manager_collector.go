@@ -6,11 +6,16 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/common/log"
 	"github.com/stmcginnis/gofish"
+	redfish "github.com/stmcginnis/gofish/redfish"
 )
 
 // A ManagerCollector implements the prometheus.Collector.
 
 type managerMetric struct {
+	desc *prometheus.Desc
+}
+
+type logServiceMetric struct {
 	desc *prometheus.Desc
 }
 
@@ -46,10 +51,25 @@ var (
 	}
 )
 
+var (
+	logServiceLabelNames = []string{"name", "severity"}
+	logServiceMetrics    = map[string]logServiceMetric{
+		"entry_count": {
+			desc: prometheus.NewDesc(
+				prometheus.BuildFQName(namespace, "logservices", "entry_count"),
+				"Number of log messages",
+				logServiceLabelNames,
+				nil,
+			),
+		},
+	}
+)
+
 //ManagerCollector implemented prometheus.Collector
 type ManagerCollector struct {
 	redfishClient           *gofish.APIClient
 	metrics                 map[string]managerMetric
+	logServiceMetrics       map[string]logServiceMetric
 	collectorScrapeStatus   *prometheus.GaugeVec
 	collectorScrapeDuration *prometheus.SummaryVec
 }
@@ -57,8 +77,9 @@ type ManagerCollector struct {
 // NewManagerCollector returns a collector that collecting memory statistics
 func NewManagerCollector(namespace string, redfishClient *gofish.APIClient) *ManagerCollector {
 	return &ManagerCollector{
-		redfishClient: redfishClient,
-		metrics:       managerMetrics,
+		redfishClient:     redfishClient,
+		metrics:           managerMetrics,
+		logServiceMetrics: logServiceMetrics,
 		collectorScrapeStatus: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
@@ -112,6 +133,29 @@ func (m *ManagerCollector) Collect(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(m.metrics["manager_power_state"].desc, prometheus.GaugeValue, managerPowerStateValue, ManagerLabelValues...)
 
 			}
+
+			//TODO: move to logservice_collector.go
+			if logServices, err := manager.LogServices(); err != nil {
+				log.Infof("Errors LogServices from manager: %s", err)
+			} else {
+				for _, logService := range logServices {
+					logServiceName := logService.Name
+					if logEntries, err := logService.Entries(); err != nil {
+						log.Infof("Errors LogEntries from Logservices: %s", err)
+					} else {
+						var entryMap = map[redfish.EventSeverity][]*redfish.LogEntry{}
+						for _, entry := range logEntries {
+							entryMap[entry.Severity] = append(entryMap[entry.Severity], entry)
+						}
+						for severity, element := range entryMap {
+							logServiceLabelValues := []string{logServiceName, string(severity)}
+							count := float64(len(element))
+							ch <- prometheus.MustNewConstMetric(m.logServiceMetrics["entry_count"].desc, prometheus.GaugeValue, count, logServiceLabelValues...)
+						}
+					}
+				}
+			}
+
 		}
 		m.collectorScrapeStatus.WithLabelValues("manager").Set(float64(1))
 
