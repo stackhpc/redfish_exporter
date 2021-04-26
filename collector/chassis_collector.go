@@ -2,6 +2,7 @@ package collector
 
 import (
 	"fmt"
+	"strings"
 	"sync"
 
 	"github.com/apex/log"
@@ -17,7 +18,7 @@ var (
 	ChassisTemperatureLabelNames      = []string{"resource", "chassis_id", "sensor", "sensor_id"}
 	ChassisFanLabelNames              = []string{"resource", "chassis_id", "fan", "fan_id"}
 	ChassisPowerVotageLabelNames      = []string{"resource", "chassis_id", "power_votage", "power_votage_id"}
-	ChassisPowerSupplyLabelNames      = []string{"resource", "chassis_id", "power_supply", "power_supply_id"}
+	ChassisPowerSupplyLabelNames      = []string{"resource", "chassis_id", "power_supply", "power_supply_id", "power_supply_serial_number"}
 	ChassisNetworkAdapterLabelNames   = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id"}
 	ChassisNetworkPortLabelNames      = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id", "network_port", "network_port_id", "network_port_type", "network_port_speed"}
 	ChassisPhysicalSecurityLabelNames = []string{"resource", "chassis_id", "intrusion_sensor_number", "intrusion_sensor"}
@@ -409,7 +410,8 @@ func parseChassisPowerInfoPowerSupply(ch chan<- prometheus.Metric, chassisID str
 	chassisPowerInfoPowerSupplyLastPowerOutputWatts := chassisPowerInfoPowerSupply.LastPowerOutputWatts
 	chassisPowerInfoPowerSupplyState := chassisPowerInfoPowerSupply.Status.State
 	chassisPowerInfoPowerSupplyHealth := chassisPowerInfoPowerSupply.Status.Health
-	chassisPowerSupplyLabelvalues := []string{"power_supply", chassisID, chassisPowerInfoPowerSupplyName, chassisPowerInfoPowerSupplyID}
+	chassisPowerInfoPowerSerialNumber := strings.TrimSpace(chassisPowerInfoPowerSupply.SerialNumber)
+	chassisPowerSupplyLabelvalues := []string{"power_supply", chassisID, chassisPowerInfoPowerSupplyName, chassisPowerInfoPowerSupplyID, chassisPowerInfoPowerSerialNumber}
 	if chassisPowerInfoPowerSupplyStateValue, ok := parseCommonStatusState(chassisPowerInfoPowerSupplyState); ok {
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_state"].desc, prometheus.GaugeValue, chassisPowerInfoPowerSupplyStateValue, chassisPowerSupplyLabelvalues...)
 	}
