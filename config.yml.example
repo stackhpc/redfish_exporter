@@ -11,3 +11,4 @@ groups:
     password: group1_pass
 # loglevel can be one of "debug", "info", "warn", "error", or "fatal"
 # loglevel: info
+collectlogs: true

@@ -90,7 +90,7 @@ func createChassisMetricMap() map[string]Metric {
 }
 
 // NewChassisCollector returns a collector that collecting chassis statistics
-func NewChassisCollector(redfishClient *gofish.APIClient, logger *log.Entry) *ChassisCollector {
+func NewChassisCollector(redfishClient *gofish.APIClient, collectLogs bool, logger *log.Entry) *ChassisCollector {
 	// get service from redfish client
 
 	return &ChassisCollector{
@@ -267,7 +267,7 @@ func parseChassisTemperature(ch chan<- prometheus.Metric, chassisID string, chas
 	chassisTemperatureStatus := chassisTemperature.Status
 	chassisTemperatureLabelvalues := []string{"temperature", chassisID, chassisTemperatureSensorName, chassisTemperatureSensorID}
 
-	chassisTemperatureStatusHealth :=chassisTemperatureStatus.Health
+	chassisTemperatureStatusHealth := chassisTemperatureStatus.Health
 	if chassisTemperatureStatusHealthValue, ok := parseCommonStatusHealth(chassisTemperatureStatusHealth); ok {
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_temperature_sensor_health"].desc, prometheus.GaugeValue, chassisTemperatureStatusHealthValue, chassisTemperatureLabelvalues...)
 	}
