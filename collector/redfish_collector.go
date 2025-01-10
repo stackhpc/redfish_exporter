@@ -99,8 +99,12 @@ func (r *RedfishCollector) Collect(ch chan<- prometheus.Metric) {
 
 	ch <- r.redfishUp
 	ch <- prometheus.MustNewConstMetric(totalScrapeDurationDesc, prometheus.GaugeValue, time.Since(scrapeTime).Seconds())
-	defer r.redfishClient.Logout()
-	log.Info("Loging out")
+	if r.redfishClient == nil {
+
+	} else {
+		defer r.redfishClient.Logout()
+		log.Info("Loging out")
+	}
 }
 
 func newRedfishClient(host string, username string, password string) (*gofish.APIClient, error) {
