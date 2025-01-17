@@ -2,7 +2,7 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
+	"os"
 	"sync"
 
 	yaml "gopkg.in/yaml.v2"
@@ -27,7 +27,7 @@ type HostConfig struct {
 func (sc *SafeConfig) ReloadConfig(configFile string) error {
 	var c = &Config{}
 
-	yamlFile, err := ioutil.ReadFile(configFile)
+	yamlFile, err := os.ReadFile(configFile)
 	if err != nil {
 		return err
 	}
