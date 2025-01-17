@@ -194,7 +194,7 @@ func parseLinkStatus(status redfish.LinkStatus) (float64, bool) {
 	return float64(0), false
 }
 
-func parsePortLinkStatus(status redfish.PortLinkStatus) (float64, bool) {
+func parsePortLinkStatus(status redfish.NetworkPortLinkStatus) (float64, bool) {
 	if bytes.Equal([]byte(status), []byte("Up")) {
 		return float64(1), true
 	}
