@@ -71,7 +71,7 @@ func (sc *SafeConfig) HostConfigForGroup(group string) (*HostConfig, error) {
 	return &HostConfig{}, fmt.Errorf("no credentials found for group %s", group)
 }
 
-func (sc *SafeConfig) AppLogLevel() (string) {
+func (sc *SafeConfig) AppLogLevel() string {
 	sc.Lock()
 	defer sc.Unlock()
 	logLevel := sc.C.Loglevel
