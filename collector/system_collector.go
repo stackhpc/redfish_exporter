@@ -360,20 +360,19 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 
 			// process log services
-			logServices := nil
 			if collectLogs {
 				logServices, err := system.LogServices()
-			}
-			if err != nil {
-				systemLogContext.WithField("operation", "system.LogServices()").WithError(err).Error("error getting log services from system")
-			} else if logServices == nil {
-				systemLogContext.WithField("operation", "system.LogServices()").Info("no log services found")
-			} else {
-				wg10.Add(len(logServices))
+				if err != nil {
+					systemLogContext.WithField("operation", "system.LogServices()").WithError(err).Error("error getting log services from system")
+				} else if logServices == nil {
+					systemLogContext.WithField("operation", "system.LogServices()").Info("no log services found")
+				} else {
+					wg10.Add(len(logServices))
 
-				for _, logService := range logServices {
-					if err = parseLogService(ch, systemMetrics, SystemSubsystem, SystemID, logService, wg10); err != nil {
-						systemLogContext.WithField("operation", "system.LogServices()").WithError(err).Error("error getting log entries from log service")
+					for _, logService := range logServices {
+						if err = parseLogService(ch, systemMetrics, SystemSubsystem, SystemID, logService, wg10); err != nil {
+							systemLogContext.WithField("operation", "system.LogServices()").WithError(err).Error("error getting log entries from log service")
+						}
 					}
 				}
 			}
