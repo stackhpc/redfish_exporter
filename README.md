@@ -20,6 +20,46 @@ groups:
 Note that the ```default``` entry is useful as it avoids an error
 condition that is discussed in [this issue][2].
 
+## Log collection
+
+One issue you may encounter is slow scrape times when collecting logs from
+BMCs. Sometimes these scrapes can take ~10minutes. If this becomes
+problematic the collection of logs can be configured as follows:
+
+1) via the the config file
+
+To disable log collection you can set:
+
+```yaml
+collectlogs: false
+```
+
+2) via the `collectlogs` query parameter
+
+For example:
+
+```sh
+curl '127.0.0.1:9123/redfish?target=10.10.12.23&collectlogs=false'
+```
+
+3) Via a combination of both options
+
+For example, collect metrics without logs by default:
+
+Set:
+
+```yaml
+collectlogs: false
+```
+
+Every hour or so, override the config setting and fetch the logs:
+
+```sh
+curl '127.0.0.1:9123/redfish?target=10.10.12.23&collectlogs=true'
+```
+
+The `collectlogs` query parameter can be included in Prometheus config.
+
 ## Building
 
 To build the redfish_exporter executable run the command:

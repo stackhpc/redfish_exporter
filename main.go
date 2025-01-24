@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	alog "github.com/apex/log"
@@ -118,7 +119,17 @@ func metricsHandler() http.HandlerFunc {
 			}
 		}
 
-		collector := collector.NewRedfishCollector(target, hostConfig.Username, hostConfig.Password, targetLoggerCtx)
+		// Support optionally overriding collectlogs setting using a query parameter
+		collectLogs := sc.CollectLogs()
+		collectLogsOverride := r.URL.Query().Get("collectlogs")
+		if collectLogsOverride != "" {
+			if collectLogs, err = strconv.ParseBool(collectLogsOverride); err != nil {
+				targetLoggerCtx.WithError(err).Error("error parsing collectlogs query parameter as a boolean")
+				return
+			}
+		}
+
+		collector := collector.NewRedfishCollector(target, hostConfig.Username, hostConfig.Password, collectLogs, targetLoggerCtx)
 		registry.MustRegister(collector)
 		gatherers := prometheus.Gatherers{
 			prometheus.DefaultGatherer,
@@ -189,6 +200,7 @@ func main() {
             <h1>redfish Exporter</h1>
             <form action="/redfish">
             <label>Target:</label> <input type="text" name="target" placeholder="X.X.X.X" value="1.2.3.4"><br>
+            <label>CollectLogs:</label> <input type="text" name="collectlogs" placeholder="collectlogs (optional)" value="bool"><br>
             <label>Group:</label> <input type="text" name="group" placeholder="group (optional)" value=""><br>
             <input type="submit" value="Submit">
 						</form>
