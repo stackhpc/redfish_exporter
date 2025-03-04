@@ -347,10 +347,10 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			} else if simpleStorages == nil {
 				systemLogContext.WithField("operation", "system.SimpleStorages()").Info("no simple storage data found")
 			} else {
+			        processed := make(map[string]bool)
 				for _, simpleStorage := range simpleStorages {
 					devices := simpleStorage.Devices
 					wg8.Add(len(devices))
-					processed := make(map[string]bool)
 					for _, device := range devices {
 						_, exists := processed[device.Name]
 						if exists {
