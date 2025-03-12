@@ -5,6 +5,7 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stmcginnis/gofish/common"
 	"github.com/stmcginnis/gofish/redfish"
 )
 
@@ -51,14 +52,23 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, sub
 		ch <- prometheus.MustNewConstMetric(metrics[fmt.Sprintf("%s_%s", subsystem, "log_service_health_state")].desc, prometheus.GaugeValue, logServiceHealthStateValue, logServiceLabelValues...)
 	}
 
-	logEntries, err := logService.Entries()
+	logEntries, err := logService.FilteredEntries(common.WithTop(10))
 	if err != nil {
 		return
 	}
 	wg2 := &sync.WaitGroup{}
 	wg2.Add(len(logEntries))
+	processed := make(map[string]bool)
 	for _, logEntry := range logEntries {
-		go parseLogEntry(ch, metrics[fmt.Sprintf("%s_%s", subsystem, "log_entry_severity_state")].desc, collectorID, logServiceName, logServiceID, logEntry, wg2)
+		_, exists := processed[logEntry.MessageID]
+		if exists {
+			wg2.Done()
+			continue
+		} else {
+			go parseLogEntry(ch, metrics[fmt.Sprintf("%s_%s", subsystem, "log_entry_severity_state")].desc, collectorID, logServiceName, logServiceID, logEntry, wg2)
+		}
+
+		processed[logEntry.MessageID] = true
 	}
 	return
 }
