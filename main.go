@@ -118,7 +118,7 @@ func metricsHandler() http.HandlerFunc {
 				return
 			}
 		}
-		collectionCtx, err := common.NewCollectionContext(target, sc, r, hostConfig.Username, hostConfig.Password, targetLoggerCtx)
+		collectionCtx, err := common.NewCollectionContext(r, target, hostConfig, targetLoggerCtx)
 		if err != nil {
 			targetLoggerCtx.WithError(err).Error("error creating collection context")
 			return

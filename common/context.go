@@ -10,22 +10,21 @@ import (
 )
 
 type CollectionContext struct {
-	Target        string
-	Config        *SafeConfig
 	Request       *http.Request
 	RedfishClient *gofish.APIClient
 	CollectLogs   bool
 	LogCount      int
 }
 
-func NewCollectionContext(target string, config *SafeConfig, r *http.Request, username string, password string, logger *alog.Entry) (*CollectionContext, error) {
-	client, err := newRedfishClient(target, username, password)
+func NewCollectionContext(r *http.Request, target string, hostconfig *HostConfig, logger *alog.Entry) (*CollectionContext, error) {
+	client, err := newRedfishClient(target, hostconfig.Username, hostconfig.Password)
 	if err != nil {
 		logger.WithError(err).Error("error creating redfish client")
 		return nil, err
 	}
+
 	// Support optionally overriding logCounts setting using a query parameter
-	logCount := config.LogCount()
+	logCount := hostconfig.Logcount
 	logCountOverride := r.URL.Query().Get("logcount")
 	if logCountOverride != "" {
 		if logCountQuery, err := strconv.Atoi(logCountOverride); err != nil {
@@ -37,7 +36,7 @@ func NewCollectionContext(target string, config *SafeConfig, r *http.Request, us
 	logger.WithField("operation", "NewCollectionContext()").Info(fmt.Sprintf("logcount=%d", logCount))
 
 	// Support optionally overriding collectlogs setting using a query parameter
-	collectLogs := config.CollectLogs()
+	collectLogs := hostconfig.Collectlogs
 	collectLogsOverride := r.URL.Query().Get("collectlogs")
 	if collectLogsOverride != "" {
 		if collectLogsQuery, err := strconv.ParseBool(collectLogsOverride); err != nil {
@@ -46,7 +45,7 @@ func NewCollectionContext(target string, config *SafeConfig, r *http.Request, us
 			collectLogs = collectLogsQuery
 		}
 	}
-	return &CollectionContext{Target: target, Config: config, Request: r, RedfishClient: client, CollectLogs: collectLogs, LogCount: logCount}, nil
+	return &CollectionContext{Request: r, RedfishClient: client, CollectLogs: collectLogs, LogCount: logCount}, nil
 }
 
 func newRedfishClient(host string, username string, password string) (*gofish.APIClient, error) {

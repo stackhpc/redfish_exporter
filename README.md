@@ -31,7 +31,21 @@ problematic the collection of logs can be configured as follows:
 To disable log collection you can set:
 
 ```yaml
-collectlogs: false
+hosts:
+  default:
+    username: username
+    password: password
+    collectlogs: false
+```
+
+or for a group:
+
+```yaml
+groups:
+  group1:
+    username: username
+    password: password
+    collectlogs: false
 ```
 
 2) via the `collectlogs` query parameter
