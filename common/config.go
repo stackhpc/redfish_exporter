@@ -1,4 +1,4 @@
-package main
+package common
 
 import (
 	"fmt"
@@ -13,6 +13,7 @@ type Config struct {
 	Groups      map[string]HostConfig `yaml:"groups"`
 	Loglevel    string                `yaml:"loglevel"`
 	Collectlogs *bool                 `yaml:"collectlogs,omitempty"`
+	LogCount    int                   `yaml:"logcount,omitempty"`
 }
 
 type SafeConfig struct {
@@ -89,4 +90,13 @@ func (sc *SafeConfig) CollectLogs() bool {
 		return true
 	}
 	return *sc.C.Collectlogs
+}
+
+func (sc *SafeConfig) LogCount() int {
+	sc.Lock()
+	defer sc.Unlock()
+	if sc.C.Collectlogs == nil {
+		return 0
+	}
+	return sc.C.LogCount
 }

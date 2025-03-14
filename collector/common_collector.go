@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	redfish_common "github.com/jenningsloy318/redfish_exporter/common"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stmcginnis/gofish/common"
 	"github.com/stmcginnis/gofish/redfish"
@@ -34,7 +35,7 @@ func addToMetricMap(metricMap map[string]Metric, subsystem, name, help string, v
 	}
 }
 
-func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, subsystem, collectorID string, logService *redfish.LogService, wg *sync.WaitGroup) (err error) {
+func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx *redfish_common.CollectionContext, subsystem, collectorID string, logService *redfish.LogService, wg *sync.WaitGroup) (err error) {
 	defer wg.Done()
 	logServiceName := logService.Name
 	logServiceID := logService.ID
@@ -51,8 +52,14 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, sub
 	if logServiceHealthStateValue, ok := parseCommonStatusHealth(logServiceHealthState); ok {
 		ch <- prometheus.MustNewConstMetric(metrics[fmt.Sprintf("%s_%s", subsystem, "log_service_health_state")].desc, prometheus.GaugeValue, logServiceHealthStateValue, logServiceLabelValues...)
 	}
-
-	logEntries, err := logService.FilteredEntries(common.WithTop(10))
+	var (
+		logEntries []*redfish.LogEntry
+	)
+	if ctx.LogCount != 0 {
+		logEntries, err = logService.FilteredEntries(common.WithTop(ctx.LogCount))
+	} else {
+		logEntries, err = logService.Entries()
+	}
 	if err != nil {
 		return
 	}
