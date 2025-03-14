@@ -33,7 +33,7 @@ func NewCollectionContext(r *http.Request, target string, hostconfig *HostConfig
 			logCount = logCountQuery
 		}
 	}
-	logger.WithField("operation", "NewCollectionContext()").Info(fmt.Sprintf("logcount=%d", logCount))
+	//logger.WithField("operation", "NewCollectionContext()").Info(fmt.Sprintf("logcount=%d", logCount))
 
 	// Support optionally overriding collectlogs setting using a query parameter
 	collectLogs := hostconfig.Collectlogs
