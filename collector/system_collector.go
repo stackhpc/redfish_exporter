@@ -354,13 +354,15 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 					for _, device := range devices {
 						_, exists := processed[device.Name]
 						if exists {
-							systemLogContext.WithField("operation", "system.SimpleStorages()").Info(fmt.Sprintf("Ignoring duplicate storage device: %s", device.Name))
+							systemLogContext.WithField("operation",
+							"system.SimpleStorages()").Info(fmt.Sprintf("Ignoring " +
+							"duplicate storage device: %s. Please check whether this " +
+							"device is returning duplicate data and report to the vendor.",
+							device.Name))
 							wg8.Done()
 							continue
-						} else {
-							go parseDevice(ch, systemHostName, device, wg8)
 						}
-
+					        go parseDevice(ch, systemHostName, device, wg8)
 						processed[device.Name] = true
 					}
 				}
