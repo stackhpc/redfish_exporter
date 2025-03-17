@@ -13,7 +13,7 @@ type CollectionContext struct {
 	Request       *http.Request
 	RedfishClient *gofish.APIClient
 	CollectLogs   bool
-	LogCount      int
+	LogCount      map[string]int
 }
 
 func NewCollectionContext(r *http.Request, target string, hostconfig *HostConfig, logger *alog.Entry) (*CollectionContext, error) {
@@ -25,15 +25,8 @@ func NewCollectionContext(r *http.Request, target string, hostconfig *HostConfig
 
 	// Support optionally overriding logCounts setting using a query parameter
 	logCount := hostconfig.Logcount
-	logCountOverride := r.URL.Query().Get("logcount")
-	if logCountOverride != "" {
-		if logCountQuery, err := strconv.Atoi(logCountOverride); err != nil {
-			logger.WithError(err).Error("error parsing collectlogs query parameter as a boolean")
-		} else {
-			logCount = logCountQuery
-		}
-	}
-	//logger.WithField("operation", "NewCollectionContext()").Info(fmt.Sprintf("logcount=%d", logCount))
+	// TODO.. query parameter could logcount_<logServiceName>=10
+	logger.WithField("operation", "NewCollectionContext()").Info(fmt.Sprintf("logcount=%s", fmt.Sprint(logCount)))
 
 	// Support optionally overriding collectlogs setting using a query parameter
 	collectLogs := hostconfig.Collectlogs

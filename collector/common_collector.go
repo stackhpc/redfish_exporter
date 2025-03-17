@@ -55,8 +55,13 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx
 	var (
 		logEntries []*redfish.LogEntry
 	)
-	if ctx.LogCount != 0 {
-		logEntries, err = logService.FilteredEntries(common.WithTop(ctx.LogCount))
+	logCount, ok := ctx.LogCount[logServiceName]
+	if !ok {
+		logCount = -1
+	}
+
+	if logCount > 0 {
+		logEntries, err = logService.FilteredEntries(common.WithTop(logCount))
 	} else {
 		logEntries, err = logService.Entries()
 	}

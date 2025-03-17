@@ -20,10 +20,10 @@ type SafeConfig struct {
 }
 
 type HostConfig struct {
-	Username    string `yaml:"username"`
-	Password    string `yaml:"password"`
-	Collectlogs bool   `yaml:"collectlogs,omitempty"`
-	Logcount    int    `yaml:"logcount,omitempty"`
+	Username    string         `yaml:"username"`
+	Password    string         `yaml:"password"`
+	Collectlogs bool           `yaml:"collectlogs,omitempty"`
+	Logcount    map[string]int `yaml:"logcount,omitempty"`
 }
 
 func (sc *SafeConfig) ReloadConfig(configFile string) error {
