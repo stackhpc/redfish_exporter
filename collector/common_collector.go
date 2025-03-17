@@ -64,7 +64,7 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx
 		}
 	}
 
-	logger.WithField("operation", "parseLogService").Info(fmt.Sprintf("logcount=%d", logCount))
+	logger.WithField("operation", "parseLogService").Info(fmt.Sprintf("logServiceID=%s, logcount=%d", logServiceID, logCount))
 
 	if logCount > 0 {
 		logEntries, err = logService.FilteredEntries(common.WithTop(logCount))
