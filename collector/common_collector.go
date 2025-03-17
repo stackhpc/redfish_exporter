@@ -57,7 +57,10 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx
 	)
 	logCount, ok := ctx.LogCount[logServiceID]
 	if !ok {
-		logCount = -1
+		logCount, ok = ctx.LogCount["DEFAULT"]
+		if !ok {
+			logCount = -1
+		}
 	}
 
 	if logCount > 0 {

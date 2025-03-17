@@ -74,6 +74,47 @@ curl '127.0.0.1:9123/redfish?target=10.10.12.23&collectlogs=true'
 
 The `collectlogs` query parameter can be included in Prometheus config.
 
+
+### Log collection count
+
+To restrict the number of logs collected for all log services:
+
+```
+hosts:
+  default:
+    username: username
+    password: password
+    collectlogs: true
+    logcount:
+      DEFAULT: 10
+```
+
+For a particular log service, `Sel`:
+
+```
+hosts:
+  default:
+    username: username
+    password: password
+    collectlogs: true
+    logcount:
+      Sel: 20
+```
+
+Collect all logs for one service, `Sel` , but limit others:
+
+```
+hosts:
+  default:
+    username: username
+    password: password
+    collectlogs: true
+    logcount:
+      DEFAULT: 10
+      Sel: -1
+```
+
+
 ## Building
 
 To build the redfish_exporter executable run the command:
