@@ -250,7 +250,7 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 					wg6.Add(len(logServices))
 
 					for _, logService := range logServices {
-						if err = parseLogService(ch, chassisMetrics, c.Ctx, ChassisSubsystem, chassisID, logService, wg6); err != nil {
+						if err = parseLogService(ch, chassisMetrics, c.Ctx, chassisLogContext, ChassisSubsystem, chassisID, logService, wg6); err != nil {
 							chassisLogContext.WithField("operation", "chassis.LogServices()").WithError(err).Error("error getting log entries from log service")
 						}
 					}

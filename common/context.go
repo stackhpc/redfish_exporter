@@ -23,10 +23,8 @@ func NewCollectionContext(r *http.Request, target string, hostconfig *HostConfig
 		return nil, err
 	}
 
-	// Support optionally overriding logCounts setting using a query parameter
 	logCount := hostconfig.Logcount
 	// TODO.. query parameter could logcount_<logServiceName>=10
-	logger.WithField("operation", "NewCollectionContext()").Info(fmt.Sprintf("logcount=%s", fmt.Sprint(logCount)))
 
 	// Support optionally overriding collectlogs setting using a query parameter
 	collectLogs := hostconfig.Collectlogs

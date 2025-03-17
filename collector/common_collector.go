@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/apex/log"
 	redfish_common "github.com/jenningsloy318/redfish_exporter/common"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stmcginnis/gofish/common"
@@ -35,7 +36,7 @@ func addToMetricMap(metricMap map[string]Metric, subsystem, name, help string, v
 	}
 }
 
-func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx *redfish_common.CollectionContext, subsystem, collectorID string, logService *redfish.LogService, wg *sync.WaitGroup) (err error) {
+func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx *redfish_common.CollectionContext, logger *log.Entry, subsystem, collectorID string, logService *redfish.LogService, wg *sync.WaitGroup) (err error) {
 	defer wg.Done()
 	logServiceName := logService.Name
 	logServiceID := logService.ID
@@ -62,6 +63,8 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx
 			logCount = -1
 		}
 	}
+
+	logger.WithField("operation", "parseLogService").Info(fmt.Sprintf("logcount=%d", logCount))
 
 	if logCount > 0 {
 		logEntries, err = logService.FilteredEntries(common.WithTop(logCount))
