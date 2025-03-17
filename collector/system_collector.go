@@ -347,11 +347,23 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			} else if simpleStorages == nil {
 				systemLogContext.WithField("operation", "system.SimpleStorages()").Info("no simple storage data found")
 			} else {
+			        processed := make(map[string]bool)
 				for _, simpleStorage := range simpleStorages {
 					devices := simpleStorage.Devices
 					wg8.Add(len(devices))
 					for _, device := range devices {
-						go parseDevice(ch, systemHostName, device, wg8)
+						_, exists := processed[device.Name]
+						if exists {
+							systemLogContext.WithField("operation",
+							"system.SimpleStorages()").Info(fmt.Sprintf("Ignoring " +
+							"duplicate storage device: %s. Please check whether this " +
+							"device is returning duplicate data and report to the vendor.",
+							device.Name))
+							wg8.Done()
+							continue
+						}
+					        go parseDevice(ch, systemHostName, device, wg8)
+						processed[device.Name] = true
 					}
 				}
 			}
