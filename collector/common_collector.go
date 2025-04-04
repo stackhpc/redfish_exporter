@@ -57,8 +57,16 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, sub
 	}
 	wg2 := &sync.WaitGroup{}
 	wg2.Add(len(logEntries))
+	processed := make(map[string]bool)
 	for _, logEntry := range logEntries {
+		_, exists := processed[logEntry.MessageID]
+		if exists {
+			wg2.Done()
+			continue
+		}
 		go parseLogEntry(ch, metrics[fmt.Sprintf("%s_%s", subsystem, "log_entry_severity_state")].desc, collectorID, logServiceName, logServiceID, logEntry, wg2)
+
+		processed[logEntry.MessageID] = true
 	}
 	return
 }
