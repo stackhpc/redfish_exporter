@@ -242,6 +242,7 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			} else if storages == nil {
 				systemLogContext.WithField("operation", "system.Storage()").Info("no storage data found")
 			} else {
+				processed := make(map[string]bool)
 				for _, storage := range storages {
 					if volumes, err := storage.Volumes(); err != nil {
 						systemLogContext.WithField("operation", "system.Volumes()").WithError(err).Error("error getting storage data from system")
@@ -249,7 +250,18 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 						wg3.Add(len(volumes))
 
 						for _, volume := range volumes {
+							_, exists := processed[volume.Name]
+							if exists {
+								systemLogContext.WithField("operation",
+									"system.Storage()").Info(fmt.Sprintf("Ignoring "+
+									"duplicate storage volume: %s. Please check whether this "+
+									"volume is returning duplicate data and report to the vendor.",
+									volume.Name))
+								wg3.Done()
+								continue
+							}
 							go parseVolume(ch, systemHostName, volume, wg3)
+							processed[volume.Name] = true
 						}
 					}
 
@@ -347,7 +359,7 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			} else if simpleStorages == nil {
 				systemLogContext.WithField("operation", "system.SimpleStorages()").Info("no simple storage data found")
 			} else {
-			        processed := make(map[string]bool)
+				processed := make(map[string]bool)
 				for _, simpleStorage := range simpleStorages {
 					devices := simpleStorage.Devices
 					wg8.Add(len(devices))
@@ -355,14 +367,14 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 						_, exists := processed[device.Name]
 						if exists {
 							systemLogContext.WithField("operation",
-							"system.SimpleStorages()").Info(fmt.Sprintf("Ignoring " +
-							"duplicate storage device: %s. Please check whether this " +
-							"device is returning duplicate data and report to the vendor.",
-							device.Name))
+								"system.SimpleStorages()").Info(fmt.Sprintf("Ignoring "+
+								"duplicate storage device: %s. Please check whether this "+
+								"device is returning duplicate data and report to the vendor.",
+								device.Name))
 							wg8.Done()
 							continue
 						}
-					        go parseDevice(ch, systemHostName, device, wg8)
+						go parseDevice(ch, systemHostName, device, wg8)
 						processed[device.Name] = true
 					}
 				}
