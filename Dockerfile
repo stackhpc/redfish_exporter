@@ -1,4 +1,4 @@
-FROM golang:rc-bullseye AS builder
+FROM golang:1.24.2 AS builder
 
 LABEL maintainer="Jennings Liu <jenningsloy318@gmail.com>"
 
@@ -17,7 +17,7 @@ RUN mkdir -p /go/src/github.com/ && \
     cd /go/src/github.com/jenningsloy318/redfish_exporter && \
     make build
 
-FROM golang:rc-bullseye
+FROM golang:1.24.2
 
 COPY --from=builder /go/src/github.com/jenningsloy318/redfish_exporter/build/redfish_exporter /usr/local/bin/redfish_exporter
 RUN mkdir /etc/prometheus
