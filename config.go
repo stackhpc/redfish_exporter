@@ -21,8 +21,9 @@ type SafeConfig struct {
 }
 
 type HostConfig struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
+	Username        string   `yaml:"username"`
+	Password        string   `yaml:"password"`
+	DisabledMetrics []string `yaml:"disabled_metrics"`
 }
 
 func (sc *SafeConfig) ReloadConfig(configFile string) error {
@@ -47,15 +48,25 @@ func (sc *SafeConfig) HostConfigForTarget(target string) (*HostConfig, error) {
 	sc.Lock()
 	defer sc.Unlock()
 	if hostConfig, ok := sc.C.Hosts[target]; ok {
+		disabledMetrics := hostConfig.DisabledMetrics
+		if disabledMetrics == nil {
+			disabledMetrics = []string{}
+		}
 		return &HostConfig{
-			Username: hostConfig.Username,
-			Password: hostConfig.Password,
+			Username:        hostConfig.Username,
+			Password:        hostConfig.Password,
+			DisabledMetrics: disabledMetrics,
 		}, nil
 	}
 	if hostConfig, ok := sc.C.Hosts["default"]; ok {
+		disabledMetrics := hostConfig.DisabledMetrics
+		if disabledMetrics == nil {
+			disabledMetrics = []string{}
+		}
 		return &HostConfig{
-			Username: hostConfig.Username,
-			Password: hostConfig.Password,
+			Username:        hostConfig.Username,
+			Password:        hostConfig.Password,
+			DisabledMetrics: disabledMetrics,
 		}, nil
 	}
 	return &HostConfig{}, fmt.Errorf("no credentials found for target %s", target)
