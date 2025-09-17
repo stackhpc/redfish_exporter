@@ -82,6 +82,7 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx
 		if exists {
 			wg2.Done()
 			continue
+		}
 		go parseLogEntry(ch, metrics[fmt.Sprintf("%s_%s", subsystem, "log_entry_severity_state")].desc, collectorID, logServiceName, logServiceID, logEntry, wg2)
 		processed[logEntry.MessageID] = true
 	}
