@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/apex/log"
+	"github.com/jenningsloy318/redfish_exporter/common"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/stmcginnis/gofish"
 )
 
 // ManagerSubmanager is the manager subsystem
@@ -22,9 +22,8 @@ var (
 
 // ManagerCollector implements the prometheus.Collector.
 type ManagerCollector struct {
-	redfishClient         *gofish.APIClient
+	Ctx                   *common.CollectionContext
 	metrics               map[string]Metric
-	collectLogs           bool
 	collectorScrapeStatus *prometheus.GaugeVec
 	Log                   *log.Entry
 }
@@ -43,11 +42,10 @@ func createManagerMetricMap() map[string]Metric {
 }
 
 // NewManagerCollector returns a collector that collecting memory statistics
-func NewManagerCollector(redfishClient *gofish.APIClient, collectLogs bool, logger *log.Entry) *ManagerCollector {
+func NewManagerCollector(ctx *common.CollectionContext, logger *log.Entry) *ManagerCollector {
 	return &ManagerCollector{
-		redfishClient: redfishClient,
-		metrics:       managerMetrics,
-		collectLogs:   collectLogs,
+		metrics: managerMetrics,
+		Ctx:     ctx,
 		Log: logger.WithFields(log.Fields{
 			"collector": "ManagerCollector",
 		}),
@@ -74,9 +72,9 @@ func (m *ManagerCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect implemented prometheus.Collector
 func (m *ManagerCollector) Collect(ch chan<- prometheus.Metric) {
 	collectorLogContext := m.Log
-	collectLogs := m.collectLogs
+	collectLogs := m.Ctx.CollectLogs
 	//get service
-	service := m.redfishClient.Service
+	service := m.Ctx.RedfishClient.Service
 
 	// get a list of managers from service
 	if managers, err := service.Managers(); err != nil {
@@ -118,7 +116,7 @@ func (m *ManagerCollector) Collect(ch chan<- prometheus.Metric) {
 					wg.Add(len(logServices))
 
 					for _, logService := range logServices {
-						if err = parseLogService(ch, managerMetrics, ManagerSubmanager, ManagerID, logService, wg); err != nil {
+						if err = parseLogService(ch, managerMetrics, m.Ctx, managerLogContext, ManagerSubmanager, ManagerID, logService, wg); err != nil {
 							managerLogContext.WithField("operation", "manager.LogServices()").WithError(err).Error("error getting log entries from log service")
 						}
 					}

@@ -1,4 +1,4 @@
-package main
+package common
 
 import (
 	"fmt"
@@ -9,10 +9,9 @@ import (
 )
 
 type Config struct {
-	Hosts       map[string]HostConfig `yaml:"hosts"`
-	Groups      map[string]HostConfig `yaml:"groups"`
-	Loglevel    string                `yaml:"loglevel"`
-	Collectlogs *bool                 `yaml:"collectlogs,omitempty"`
+	Hosts    map[string]HostConfig `yaml:"hosts"`
+	Groups   map[string]HostConfig `yaml:"groups"`
+	Loglevel string                `yaml:"loglevel"`
 }
 
 type SafeConfig struct {
@@ -21,8 +20,10 @@ type SafeConfig struct {
 }
 
 type HostConfig struct {
-	Username string `yaml:"username"`
-	Password string `yaml:"password"`
+	Username    string         `yaml:"username"`
+	Password    string         `yaml:"password"`
+	Collectlogs bool           `yaml:"collectlogs,omitempty"`
+	Logcount    map[string]int `yaml:"logcount,omitempty"`
 }
 
 func (sc *SafeConfig) ReloadConfig(configFile string) error {
@@ -48,14 +49,18 @@ func (sc *SafeConfig) HostConfigForTarget(target string) (*HostConfig, error) {
 	defer sc.Unlock()
 	if hostConfig, ok := sc.C.Hosts[target]; ok {
 		return &HostConfig{
-			Username: hostConfig.Username,
-			Password: hostConfig.Password,
+			Username:    hostConfig.Username,
+			Password:    hostConfig.Password,
+			Collectlogs: hostConfig.Collectlogs,
+			Logcount:    hostConfig.Logcount,
 		}, nil
 	}
 	if hostConfig, ok := sc.C.Hosts["default"]; ok {
 		return &HostConfig{
-			Username: hostConfig.Username,
-			Password: hostConfig.Password,
+			Username:    hostConfig.Username,
+			Password:    hostConfig.Password,
+			Collectlogs: hostConfig.Collectlogs,
+			Logcount:    hostConfig.Logcount,
 		}, nil
 	}
 	return &HostConfig{}, fmt.Errorf("no credentials found for target %s", target)
@@ -67,7 +72,12 @@ func (sc *SafeConfig) HostConfigForGroup(group string) (*HostConfig, error) {
 	sc.Lock()
 	defer sc.Unlock()
 	if hostConfig, ok := sc.C.Groups[group]; ok {
-		return &hostConfig, nil
+		return &HostConfig{
+			Username:    hostConfig.Username,
+			Password:    hostConfig.Password,
+			Collectlogs: hostConfig.Collectlogs,
+			Logcount:    hostConfig.Logcount,
+		}, nil
 	}
 	return &HostConfig{}, fmt.Errorf("no credentials found for group %s", group)
 }
@@ -80,13 +90,4 @@ func (sc *SafeConfig) AppLogLevel() string {
 		return logLevel
 	}
 	return "info"
-}
-
-func (sc *SafeConfig) CollectLogs() bool {
-	sc.Lock()
-	defer sc.Unlock()
-	if sc.C.Collectlogs == nil {
-		return true
-	}
-	return *sc.C.Collectlogs
 }

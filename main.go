@@ -5,12 +5,12 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"strconv"
 	"syscall"
 
 	alog "github.com/apex/log"
 	kitlog "github.com/go-kit/log"
 	"github.com/jenningsloy318/redfish_exporter/collector"
+	"github.com/jenningsloy318/redfish_exporter/common"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
@@ -36,8 +36,8 @@ var (
 		"web.listen-address",
 		"Address to listen on for web interface and telemetry.",
 	).Default(":9610").String()
-	sc = &SafeConfig{
-		C: &Config{},
+	sc = &common.SafeConfig{
+		C: &common.Config{},
 	}
 	reloadCh chan chan error
 )
@@ -95,7 +95,7 @@ func metricsHandler() http.HandlerFunc {
 		targetLoggerCtx.Info("scraping target host")
 
 		var (
-			hostConfig *HostConfig
+			hostConfig *common.HostConfig
 			err        error
 			ok         bool
 			group      []string
@@ -118,18 +118,12 @@ func metricsHandler() http.HandlerFunc {
 				return
 			}
 		}
-
-		// Support optionally overriding collectlogs setting using a query parameter
-		collectLogs := sc.CollectLogs()
-		collectLogsOverride := r.URL.Query().Get("collectlogs")
-		if collectLogsOverride != "" {
-			if collectLogs, err = strconv.ParseBool(collectLogsOverride); err != nil {
-				targetLoggerCtx.WithError(err).Error("error parsing collectlogs query parameter as a boolean")
-				return
-			}
+		collectionCtx, err := common.NewCollectionContext(r, target, hostConfig, targetLoggerCtx)
+		if err != nil {
+			targetLoggerCtx.WithError(err).Error("error creating collection context")
+			return
 		}
-
-		collector := collector.NewRedfishCollector(target, hostConfig.Username, hostConfig.Password, collectLogs, targetLoggerCtx)
+		collector := collector.NewRedfishCollector(collectionCtx, targetLoggerCtx)
 		registry.MustRegister(collector)
 		gatherers := prometheus.Gatherers{
 			prometheus.DefaultGatherer,
@@ -147,7 +141,6 @@ func main() {
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
 	kitlogger := kitlog.NewLogfmtLogger(os.Stderr)
-
 	configLoggerCtx := rootLoggerCtx.WithField("config", *configFile)
 	configLoggerCtx.Info("starting app")
 	// load config  first time

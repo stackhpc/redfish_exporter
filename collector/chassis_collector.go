@@ -7,8 +7,8 @@ import (
 	"sync"
 
 	"github.com/apex/log"
+	"github.com/jenningsloy318/redfish_exporter/common"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/stmcginnis/gofish"
 	"github.com/stmcginnis/gofish/redfish"
 )
 
@@ -33,9 +33,8 @@ var (
 
 // ChassisCollector implements the prometheus.Collector.
 type ChassisCollector struct {
-	redfishClient         *gofish.APIClient
+	Ctx                   *common.CollectionContext
 	metrics               map[string]Metric
-	collectLogs           bool
 	collectorScrapeStatus *prometheus.GaugeVec
 	Log                   *log.Entry
 }
@@ -91,13 +90,12 @@ func createChassisMetricMap() map[string]Metric {
 }
 
 // NewChassisCollector returns a collector that collecting chassis statistics
-func NewChassisCollector(redfishClient *gofish.APIClient, collectLogs bool, logger *log.Entry) *ChassisCollector {
+func NewChassisCollector(ctx *common.CollectionContext, logger *log.Entry) *ChassisCollector {
 	// get service from redfish client
 
 	return &ChassisCollector{
-		redfishClient: redfishClient,
-		metrics:       chassisMetrics,
-		collectLogs:   collectLogs,
+		metrics: chassisMetrics,
+		Ctx:     ctx,
 		Log: logger.WithFields(log.Fields{
 			"collector": "ChassisCollector",
 		}),
@@ -124,8 +122,8 @@ func (c *ChassisCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect implemented prometheus.Collector
 func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 	collectorLogContext := c.Log
-	collectLogs := c.collectLogs
-	service := c.redfishClient.Service
+	collectLogs := c.Ctx.CollectLogs
+	service := c.Ctx.RedfishClient.Service
 
 	// get a list of chassis from service
 	if chassises, err := service.Chassis(); err != nil {
@@ -252,7 +250,7 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 					wg6.Add(len(logServices))
 
 					for _, logService := range logServices {
-						if err = parseLogService(ch, chassisMetrics, ChassisSubsystem, chassisID, logService, wg6); err != nil {
+						if err = parseLogService(ch, chassisMetrics, c.Ctx, chassisLogContext, ChassisSubsystem, chassisID, logService, wg6); err != nil {
 							chassisLogContext.WithField("operation", "chassis.LogServices()").WithError(err).Error("error getting log entries from log service")
 						}
 					}
