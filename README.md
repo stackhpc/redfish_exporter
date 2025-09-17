@@ -16,6 +16,11 @@ groups:
   group1:
     username: group1_user
     password: group1_pass
+  flakey:
+    username: "Administrator"
+    password: "Password"
+    disabled_metrics:
+      - "ethernet_interfaces"
 ```
 Note that the ```default``` entry is useful as it avoids an error
 condition that is discussed in [this issue][2].
@@ -74,7 +79,6 @@ curl '127.0.0.1:9123/redfish?target=10.10.12.23&collectlogs=true'
 
 The `collectlogs` query parameter can be included in Prometheus config.
 
-
 ### Log collection count
 
 To restrict the number of logs collected for all log services:
@@ -114,6 +118,34 @@ hosts:
       Sel: -1
 ```
 
+## Disabling collection of specific groups of metrics
+
+Sometimes it isn't possible to gather all metrics from a BMC because
+it doesn't conform to the Redfish standard due to a bug. Or perhaps
+you don't need all the metrics. In either case, basic support exists
+for skipping specific metric groups at the `default`, `group` or
+`host` level:
+
+```yaml
+hosts:
+  10.36.48.24:
+    username: admin
+    password: pass
+    disabled_metrics:
+      - "ethernet_interfaces"
+  default:
+    username: admin
+    password: pass
+    disabled_metrics:
+      - "memory"
+      - "processor"
+      - "storage"
+      - "pcie_devices"
+      - "network_interfaces"
+      - "ethernet_interfaces"
+      - "simple_storage"
+      - "pcie_functions"
+```
 
 ## Building
 

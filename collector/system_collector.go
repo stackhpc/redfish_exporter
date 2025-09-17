@@ -2,6 +2,7 @@ package collector
 
 import (
 	"fmt"
+	"slices"
 	"sync"
 
 	"github.com/apex/log"
@@ -129,6 +130,7 @@ func (s *SystemCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect implements prometheus.Collector.
 func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 	collectorLogContext := s.Log
+	disabledMetrics := s.Ctx.DisabledMetrics
 	collectLogs := s.Ctx.CollectLogs
 	//get service
 	service := s.Ctx.RedfishClient.Service
@@ -182,212 +184,47 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			// get system OdataID
 			//systemOdataID := system.ODataID
 
-			wg1 := &sync.WaitGroup{}
-			wg2 := &sync.WaitGroup{}
-			wg3 := &sync.WaitGroup{}
-			wg4 := &sync.WaitGroup{}
-			wg5 := &sync.WaitGroup{}
-			wg6 := &sync.WaitGroup{}
-			wg7 := &sync.WaitGroup{}
-			wg8 := &sync.WaitGroup{}
-			wg9 := &sync.WaitGroup{}
-			wg10 := &sync.WaitGroup{}
+			wg1 := &sync.WaitGroup{}  // memory
+			wg2 := &sync.WaitGroup{}  // processor
+			wg3 := &sync.WaitGroup{}  // storage/volumes
+			wg4 := &sync.WaitGroup{}  // storage/drives
+			wg5 := &sync.WaitGroup{}  // pcie devices
+			wg6 := &sync.WaitGroup{}  // network interfaces
+			wg7 := &sync.WaitGroup{}  // ethernet interfaces
+			wg8 := &sync.WaitGroup{}  // simple storage
+			wg9 := &sync.WaitGroup{}  // pcie functions
+			wg10 := &sync.WaitGroup{} // log services
 
-			// process memory metrics
-			// construct memory Link
-			//memoriesLink := fmt.Sprintf("%sMemory/", systemOdataID)
-
-			//if memories, err := redfish.ListReferencedMemorys(s.redfishClient, memoriesLink); err != nil {
-			memories, err := system.Memory()
-			if err != nil {
-				systemLogContext.WithField("operation", "system.Memory()").WithError(err).Error("error getting memory data from system")
-			} else if memories == nil {
-				systemLogContext.WithField("operation", "system.Memory()").Info("no memory data found")
-			} else {
-				wg1.Add(len(memories))
-
-				for _, memory := range memories {
-					go parseMemory(ch, systemHostName, memory, wg1)
-				}
+			if !slices.Contains(disabledMetrics, "memory") {
+				processMemory(system, systemLogContext, wg1, ch, systemHostName)
 			}
 
-			// process processor metrics
-
-			//processorsLink := fmt.Sprintf("%sProcessors/", systemOdataID)
-
-			//if processors, err := redfish.ListReferencedProcessors(s.redfishClient, processorsLink); err != nil {
-			processors, err := system.Processors()
-			if err != nil {
-				systemLogContext.WithField("operation", "system.Processors()").WithError(err).Error("error getting processor data from system")
-			} else if processors == nil {
-				systemLogContext.WithField("operation", "system.Processors()").Info("no processor data found")
-			} else {
-				wg2.Add(len(processors))
-
-				for _, processor := range processors {
-					go parseProcessor(ch, systemHostName, processor, wg2)
-
-				}
+			if !slices.Contains(disabledMetrics, "processor") {
+				processProcessors(system, systemLogContext, wg2, ch, systemHostName)
 			}
 
-			//process storage
-			//storagesLink := fmt.Sprintf("%sStorage/", systemOdataID)
-
-			//if storages, err := redfish.ListReferencedStorages(s.redfishClient, storagesLink); err != nil {
-			storages, err := system.Storage()
-			if err != nil {
-				systemLogContext.WithField("operation", "system.Storage()").WithError(err).Error("error getting storage data from system")
-			} else if storages == nil {
-				systemLogContext.WithField("operation", "system.Storage()").Info("no storage data found")
-			} else {
-				processed := make(map[string]bool)
-				for _, storage := range storages {
-					if volumes, err := storage.Volumes(); err != nil {
-						systemLogContext.WithField("operation", "system.Volumes()").WithError(err).Error("error getting storage data from system")
-					} else {
-						wg3.Add(len(volumes))
-
-						for _, volume := range volumes {
-							_, exists := processed[volume.Name]
-							if exists {
-								systemLogContext.WithField("operation",
-									"system.Storage()").Info(fmt.Sprintf("Ignoring "+
-									"duplicate storage volume: %s. Please check whether this "+
-									"volume is returning duplicate data and report to the vendor.",
-									volume.Name))
-								wg3.Done()
-								continue
-							}
-							go parseVolume(ch, systemHostName, volume, wg3)
-							processed[volume.Name] = true
-						}
-					}
-
-					drives, err := storage.Drives()
-					if err != nil {
-						systemLogContext.WithField("operation", "system.Drives()").WithError(err).Error("error getting drive data from system")
-					} else if drives == nil {
-						systemLogContext.WithFields(log.Fields{"operation": "system.Drives()", "storage": storage.ID}).Info("no drive data found")
-					} else {
-						wg4.Add(len(drives))
-						for _, drive := range drives {
-							go parseDrive(ch, systemHostName, drive, wg4)
-						}
-					}
-
-					//					if storagecontrollers, err := storage.StorageControllers(); err != nil {
-					//						log.Infof("Errors Getting storagecontrollers from system storage : %s", err)
-					//					} else {
-					//
-					//						for _, controller := range storagecontrollers {
-					//
-					//							controllerODataIDslice := strings.Split(controller.ODataID, "/")
-					//							controllerName := controllerODataIDslice[len(controllerODataIDslice)-1]
-					//							controllerState := controller.Status.State
-					//							controllerHealthState := controller.Status.Health
-					//							controllerLabelValues := []string{ "storage_controller", controllerName, systemHostName)
-					//							if controllerStateValue,ok := parseCommonStatusState(controllerState); ok {
-					//								ch <- prometheus.MustNewConstMetric(s.metrics["system_storage_controller_state"].desc, prometheus.GaugeValue, controllerStateValue, //controllerLabelValues...)
-					//
-					//							}
-					//							if controllerHealthStateValue,ok := parseCommonStatusHealth(controllerHealthState); ok {
-					//								ch <- prometheus.MustNewConstMetric(s.metrics["system_storage_controller_health_state"].desc, prometheus.GaugeValue, controllerHealthStateValue, //controllerLabelValues...)
-					//
-					//							}
-					//
-					//						}
-					//
-					//					}
-
-				}
-			}
-			//process pci devices
-			//pciDevicesLink := fmt.Sprintf("%sPcidevice/", systemOdataID)
-			pcieDevices, err := system.PCIeDevices()
-			if err != nil {
-				systemLogContext.WithField("operation", "system.PCIeDevices()").WithError(err).Error("error getting PCI-E device data from system")
-			} else if pcieDevices == nil {
-				systemLogContext.WithField("operation", "system.PCIeDevices()").Info("no PCI-E device data found")
-			} else {
-				processed := make(map[string]bool)
-				wg5.Add(len(pcieDevices))
-				//Some devices are returning duplicated PCIeDevices. This is workaround for this. Example of such data can be found in sampleOut/system_duplicated_devices.json
-				for _, pcieDevice := range pcieDevices {
-					_, exists := processed[pcieDevice.ODataID]
-					if exists {
-						systemLogContext.WithField("operation", "system.PCIeDevices()").Info(fmt.Sprintf("Ignoring duplicate pci device: %s", pcieDevice.ODataID))
-						wg5.Done()
-						continue
-					}
-					processed[pcieDevice.ODataID] = true
-					go parsePcieDevice(ch, systemHostName, pcieDevice, wg5)
-				}
+			if !slices.Contains(disabledMetrics, "storage") {
+				processStorage(system, systemLogContext, wg3, ch, systemHostName, wg4)
 			}
 
-			//process networkinterfaces
-			networkInterfaces, err := system.NetworkInterfaces()
-			if err != nil {
-				systemLogContext.WithField("operation", "system.NetworkInterfaces()").WithError(err).Error("error getting network interface data from system")
-			} else if networkInterfaces == nil {
-				systemLogContext.WithField("operation", "system.NetworkInterfaces()").Info("no network interface data found")
-			} else {
-				wg6.Add(len(networkInterfaces))
-				for _, networkInterface := range networkInterfaces {
-					go parseNetworkInterface(ch, systemHostName, networkInterface, wg6)
-				}
+			if !slices.Contains(disabledMetrics, "pcie_devices") {
+				processPcieDevices(system, systemLogContext, wg5, ch, systemHostName)
 			}
 
-			//process ethernetinterfaces
-			ethernetInterfaces, err := system.EthernetInterfaces()
-			if err != nil {
-				systemLogContext.WithField("operation", "system.EthernetInterfaces()").WithError(err).Error("error getting ethernet interface data from system")
-			} else if ethernetInterfaces == nil {
-				systemLogContext.WithField("operation", "system.PCIeDevices()").Info("no ethernet interface data found")
-			} else {
-				wg7.Add(len(ethernetInterfaces))
-				for _, ethernetInterface := range ethernetInterfaces {
-					go parseEthernetInterface(ch, systemHostName, ethernetInterface, wg7)
-				}
+			if !slices.Contains(disabledMetrics, "network_interfaces") {
+				processNetworkInterfaces(system, systemLogContext, wg6, ch, systemHostName)
 			}
 
-			//process simple storage
-			simpleStorages, err := system.SimpleStorages()
-			if err != nil {
-				systemLogContext.WithField("operation", "system.SimpleStorages()").WithError(err).Error("error getting simple storage data from system")
-			} else if simpleStorages == nil {
-				systemLogContext.WithField("operation", "system.SimpleStorages()").Info("no simple storage data found")
-			} else {
-				processed := make(map[string]bool)
-				for _, simpleStorage := range simpleStorages {
-					devices := simpleStorage.Devices
-					wg8.Add(len(devices))
-					for _, device := range devices {
-						_, exists := processed[device.Name]
-						if exists {
-							systemLogContext.WithField("operation",
-								"system.SimpleStorages()").Info(fmt.Sprintf("Ignoring "+
-								"duplicate storage device: %s. Please check whether this "+
-								"device is returning duplicate data and report to the vendor.",
-								device.Name))
-							wg8.Done()
-							continue
-						}
-						go parseDevice(ch, systemHostName, device, wg8)
-						processed[device.Name] = true
-					}
-				}
+			if !slices.Contains(disabledMetrics, "ethernet_interfaces") {
+				processEthernetInterfaces(system, systemLogContext, wg7, ch, systemHostName)
 			}
-			//process pci functions
-			pcieFunctions, err := system.PCIeFunctions()
-			if err != nil {
-				systemLogContext.WithField("operation", "system.PCIeFunctions()").WithError(err).Error("error getting PCI-E device function data from system")
-			} else if pcieFunctions == nil {
-				systemLogContext.WithField("operation", "system.PCIeFunctions()").Info("no PCI-E device function data found")
-			} else {
-				wg9.Add(len(pcieFunctions))
-				for _, pcieFunction := range pcieFunctions {
-					go parsePcieFunction(ch, systemHostName, pcieFunction, wg9)
-				}
+
+			if !slices.Contains(disabledMetrics, "simple_storage") {
+				processSimpleStorage(system, systemLogContext, wg8, ch, systemHostName)
+			}
+
+			if !slices.Contains(disabledMetrics, "pcie_functions") {
+				processPcieFunctions(system, systemLogContext, wg9, ch, systemHostName)
 			}
 
 			// process log services
@@ -422,6 +259,201 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			systemLogContext.Info("collector scrape completed")
 		}
 		s.collectorScrapeStatus.WithLabelValues("system").Set(float64(1))
+	}
+}
+
+func processMemory(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg1 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+	memories, err := system.Memory()
+	if err != nil {
+		systemLogContext.WithField("operation", "system.Memory()").WithError(err).Error("error getting memory data from system")
+	} else if memories == nil {
+		systemLogContext.WithField("operation", "system.Memory()").Info("no memory data found")
+	} else {
+		wg1.Add(len(memories))
+
+		for _, memory := range memories {
+			go parseMemory(ch, systemHostName, memory, wg1)
+		}
+	}
+}
+
+func processProcessors(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg2 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+	processors, err := system.Processors()
+	if err != nil {
+		systemLogContext.WithField("operation", "system.Processors()").WithError(err).Error("error getting processor data from system")
+	} else if processors == nil {
+		systemLogContext.WithField("operation", "system.Processors()").Info("no processor data found")
+	} else {
+		wg2.Add(len(processors))
+
+		for _, processor := range processors {
+			go parseProcessor(ch, systemHostName, processor, wg2)
+
+		}
+	}
+}
+
+func processStorage(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg3 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string, wg4 *sync.WaitGroup) {
+	storages, err := system.Storage()
+	if err != nil {
+		systemLogContext.WithField("operation", "system.Storage()").WithError(err).Error("error getting storage data from system")
+	} else if storages == nil {
+		systemLogContext.WithField("operation", "system.Storage()").Info("no storage data found")
+	} else {
+		processed := make(map[string]bool)
+		for _, storage := range storages {
+			if volumes, err := storage.Volumes(); err != nil {
+				systemLogContext.WithField("operation", "system.Volumes()").WithError(err).Error("error getting storage data from system")
+			} else {
+				wg3.Add(len(volumes))
+
+				for _, volume := range volumes {
+					_, exists := processed[volume.Name]
+					if exists {
+						systemLogContext.WithField("operation",
+							"system.Storage()").Info(fmt.Sprintf("Ignoring "+
+							"duplicate storage volume: %s. Please check whether this "+
+							"volume is returning duplicate data and report to the vendor.",
+							volume.Name))
+						wg3.Done()
+						continue
+					}
+					go parseVolume(ch, systemHostName, volume, wg3)
+					processed[volume.Name] = true
+				}
+			}
+
+			drives, err := storage.Drives()
+			if err != nil {
+				systemLogContext.WithField("operation", "system.Drives()").WithError(err).Error("error getting drive data from system")
+			} else if drives == nil {
+				systemLogContext.WithFields(log.Fields{"operation": "system.Drives()", "storage": storage.ID}).Info("no drive data found")
+			} else {
+				wg4.Add(len(drives))
+				for _, drive := range drives {
+					go parseDrive(ch, systemHostName, drive, wg4)
+				}
+			}
+
+			//					if storagecontrollers, err := storage.StorageControllers(); err != nil {
+			//						log.Infof("Errors Getting storagecontrollers from system storage : %s", err)
+			//					} else {
+			//
+			//						for _, controller := range storagecontrollers {
+			//
+			//							controllerODataIDslice := strings.Split(controller.ODataID, "/")
+			//							controllerName := controllerODataIDslice[len(controllerODataIDslice)-1]
+			//							controllerState := controller.Status.State
+			//							controllerHealthState := controller.Status.Health
+			//							controllerLabelValues := []string{ "storage_controller", controllerName, systemHostName)
+			//							if controllerStateValue,ok := parseCommonStatusState(controllerState); ok {
+			//								ch <- prometheus.MustNewConstMetric(s.metrics["system_storage_controller_state"].desc, prometheus.GaugeValue, controllerStateValue, //controllerLabelValues...)
+			//
+			//							}
+			//							if controllerHealthStateValue,ok := parseCommonStatusHealth(controllerHealthState); ok {
+			//								ch <- prometheus.MustNewConstMetric(s.metrics["system_storage_controller_health_state"].desc, prometheus.GaugeValue, controllerHealthStateValue, //controllerLabelValues...)
+			//
+			//							}
+			//
+			//						}
+			//
+			//					}
+
+		}
+	}
+}
+
+func processPcieDevices(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg5 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+	pcieDevices, err := system.PCIeDevices()
+	if err != nil {
+		systemLogContext.WithField("operation", "system.PCIeDevices()").WithError(err).Error("error getting PCI-E device data from system")
+	} else if pcieDevices == nil {
+		systemLogContext.WithField("operation", "system.PCIeDevices()").Info("no PCI-E device data found")
+	} else {
+		processed := make(map[string]bool)
+		wg5.Add(len(pcieDevices))
+		//Some devices are returning duplicated PCIeDevices. This is workaround for this. Example of such data can be found in sampleOut/system_duplicated_devices.json
+		for _, pcieDevice := range pcieDevices {
+			_, exists := processed[pcieDevice.ODataID]
+			if exists {
+				systemLogContext.WithField("operation", "system.PCIeDevices()").Info(fmt.Sprintf("Ignoring duplicate pci device: %s", pcieDevice.ODataID))
+				wg5.Done()
+				continue
+			}
+			processed[pcieDevice.ODataID] = true
+			go parsePcieDevice(ch, systemHostName, pcieDevice, wg5)
+		}
+	}
+}
+
+func processPcieFunctions(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg9 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+	pcieFunctions, err := system.PCIeFunctions()
+	if err != nil {
+		systemLogContext.WithField("operation", "system.PCIeFunctions()").WithError(err).Error("error getting PCI-E device function data from system")
+	} else if pcieFunctions == nil {
+		systemLogContext.WithField("operation", "system.PCIeFunctions()").Info("no PCI-E device function data found")
+	} else {
+		wg9.Add(len(pcieFunctions))
+		for _, pcieFunction := range pcieFunctions {
+			go parsePcieFunction(ch, systemHostName, pcieFunction, wg9)
+		}
+	}
+}
+
+func processSimpleStorage(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg8 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+	simpleStorages, err := system.SimpleStorages()
+	if err != nil {
+		systemLogContext.WithField("operation", "system.SimpleStorages()").WithError(err).Error("error getting simple storage data from system")
+	} else if simpleStorages == nil {
+		systemLogContext.WithField("operation", "system.SimpleStorages()").Info("no simple storage data found")
+	} else {
+		processed := make(map[string]bool)
+		for _, simpleStorage := range simpleStorages {
+			devices := simpleStorage.Devices
+			wg8.Add(len(devices))
+			for _, device := range devices {
+				_, exists := processed[device.Name]
+				if exists {
+					systemLogContext.WithField("operation",
+						"system.SimpleStorages()").Info(fmt.Sprintf("Ignoring "+
+						"duplicate storage device: %s. Please check whether this "+
+						"device is returning duplicate data and report to the vendor.",
+						device.Name))
+					wg8.Done()
+					continue
+				}
+				go parseDevice(ch, systemHostName, device, wg8)
+				processed[device.Name] = true
+			}
+		}
+	}
+}
+
+func processEthernetInterfaces(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg7 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+	ethernetInterfaces, err := system.EthernetInterfaces()
+	if err != nil {
+		systemLogContext.WithField("operation", "system.EthernetInterfaces()").WithError(err).Error("error getting ethernet interface data from system")
+	} else if ethernetInterfaces == nil {
+		systemLogContext.WithField("operation", "system.PCIeDevices()").Info("no ethernet interface data found")
+	} else {
+		wg7.Add(len(ethernetInterfaces))
+		for _, ethernetInterface := range ethernetInterfaces {
+			go parseEthernetInterface(ch, systemHostName, ethernetInterface, wg7)
+		}
+	}
+}
+
+func processNetworkInterfaces(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg6 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+	networkInterfaces, err := system.NetworkInterfaces()
+	if err != nil {
+		systemLogContext.WithField("operation", "system.NetworkInterfaces()").WithError(err).Error("error getting network interface data from system")
+	} else if networkInterfaces == nil {
+		systemLogContext.WithField("operation", "system.NetworkInterfaces()").Info("no network interface data found")
+	} else {
+		wg6.Add(len(networkInterfaces))
+		for _, networkInterface := range networkInterfaces {
+			go parseNetworkInterface(ch, systemHostName, networkInterface, wg6)
+		}
 	}
 }
 

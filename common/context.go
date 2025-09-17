@@ -10,10 +10,11 @@ import (
 )
 
 type CollectionContext struct {
-	Request       *http.Request
-	RedfishClient *gofish.APIClient
-	CollectLogs   bool
-	LogCount      map[string]int
+	Request         *http.Request
+	RedfishClient   *gofish.APIClient
+	CollectLogs     bool
+	LogCount        map[string]int
+	DisabledMetrics []string
 }
 
 func NewCollectionContext(r *http.Request, target string, hostconfig *HostConfig, logger *alog.Entry) (*CollectionContext, error) {
@@ -24,6 +25,8 @@ func NewCollectionContext(r *http.Request, target string, hostconfig *HostConfig
 	}
 
 	logCount := hostconfig.Logcount
+	disabledMetrics := hostconfig.DisabledMetrics
+
 	// TODO.. query parameter could logcount_<logServiceName>=10
 
 	// Support optionally overriding collectlogs setting using a query parameter
@@ -36,7 +39,7 @@ func NewCollectionContext(r *http.Request, target string, hostconfig *HostConfig
 			collectLogs = collectLogsQuery
 		}
 	}
-	return &CollectionContext{Request: r, RedfishClient: client, CollectLogs: collectLogs, LogCount: logCount}, nil
+	return &CollectionContext{Request: r, RedfishClient: client, CollectLogs: collectLogs, LogCount: logCount, DisabledMetrics: disabledMetrics}, nil
 }
 
 func newRedfishClient(host string, username string, password string) (*gofish.APIClient, error) {
