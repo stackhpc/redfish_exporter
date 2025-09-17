@@ -2,11 +2,11 @@ package collector
 
 import (
 	"bytes"
-	"fmt"
 	"sync"
 	"time"
 
-	"github.com/apex/log"
+	alog "github.com/apex/log"
+	"github.com/jenningsloy318/redfish_exporter/common"
 	"github.com/prometheus/client_golang/prometheus"
 	gofish "github.com/stmcginnis/gofish"
 	gofishcommon "github.com/stmcginnis/gofish/common"
@@ -40,22 +40,16 @@ type RedfishCollector struct {
 }
 
 // NewRedfishCollector return RedfishCollector
-func NewRedfishCollector(host string, username string, password string, collectLogs bool, disabledMetrics []string, logger *log.Entry) *RedfishCollector {
+func NewRedfishCollector(ctx *common.CollectionContext, logger *alog.Entry) *RedfishCollector {
 	var collectors map[string]prometheus.Collector
-	collectorLogCtx := logger
-	redfishClient, err := newRedfishClient(host, username, password)
-	if err != nil {
-		collectorLogCtx.WithError(err).Error("error creating redfish client")
-	} else {
-		chassisCollector := NewChassisCollector(redfishClient, collectLogs, collectorLogCtx)
-		systemCollector := NewSystemCollector(redfishClient, collectLogs, disabledMetrics, collectorLogCtx)
-		managerCollector := NewManagerCollector(redfishClient, collectLogs, collectorLogCtx)
+	chassisCollector := NewChassisCollector(ctx, logger)
+	systemCollector := NewSystemCollector(ctx, logger)
+	managerCollector := NewManagerCollector(ctx, logger)
 
-		collectors = map[string]prometheus.Collector{"chassis": chassisCollector, "system": systemCollector, "manager": managerCollector}
-	}
+	collectors = map[string]prometheus.Collector{"chassis": chassisCollector, "system": systemCollector, "manager": managerCollector}
 
 	return &RedfishCollector{
-		redfishClient: redfishClient,
+		redfishClient: ctx.RedfishClient,
 		collectors:    collectors,
 		redfishUp: prometheus.NewGauge(
 			prometheus.GaugeOpts{
@@ -99,23 +93,6 @@ func (r *RedfishCollector) Collect(ch chan<- prometheus.Metric) {
 
 	ch <- r.redfishUp
 	ch <- prometheus.MustNewConstMetric(totalScrapeDurationDesc, prometheus.GaugeValue, time.Since(scrapeTime).Seconds())
-}
-
-func newRedfishClient(host string, username string, password string) (*gofish.APIClient, error) {
-
-	url := fmt.Sprintf("https://%s", host)
-
-	config := gofish.ClientConfig{
-		Endpoint: url,
-		Username: username,
-		Password: password,
-		Insecure: true,
-	}
-	redfishClient, err := gofish.Connect(config)
-	if err != nil {
-		return nil, err
-	}
-	return redfishClient, nil
 }
 
 func parseCommonStatusHealth(status gofishcommon.Health) (float64, bool) {

@@ -6,8 +6,8 @@ import (
 	"sync"
 
 	"github.com/apex/log"
+	"github.com/jenningsloy318/redfish_exporter/common"
 	"github.com/prometheus/client_golang/prometheus"
-	"github.com/stmcginnis/gofish"
 	"github.com/stmcginnis/gofish/redfish"
 )
 
@@ -34,10 +34,8 @@ var (
 
 // SystemCollector implements the prometheus.Collector.
 type SystemCollector struct {
-	redfishClient   *gofish.APIClient
-	metrics         map[string]Metric
-	disabledMetrics []string
-	collectLogs     bool
+	Ctx     *common.CollectionContext
+	metrics map[string]Metric
 	prometheus.Collector
 	collectorScrapeStatus *prometheus.GaugeVec
 	Log                   *log.Entry
@@ -103,12 +101,10 @@ func createSystemMetricMap() map[string]Metric {
 }
 
 // NewSystemCollector returns a collector that collecting memory statistics
-func NewSystemCollector(redfishClient *gofish.APIClient, collectLogs bool, disabledMetrics []string, logger *log.Entry) *SystemCollector {
+func NewSystemCollector(ctx *common.CollectionContext, logger *log.Entry) *SystemCollector {
 	return &SystemCollector{
-		redfishClient:   redfishClient,
-		metrics:         systemMetrics,
-		disabledMetrics: disabledMetrics,
-		collectLogs:     collectLogs,
+		metrics: systemMetrics,
+		Ctx:     ctx,
 		Log: logger.WithFields(log.Fields{
 			"collector": "SystemCollector",
 		}),
@@ -134,10 +130,10 @@ func (s *SystemCollector) Describe(ch chan<- *prometheus.Desc) {
 // Collect implements prometheus.Collector.
 func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 	collectorLogContext := s.Log
-	collectLogs := s.collectLogs
-	disabledMetrics := s.disabledMetrics
+	disabledMetrics := s.Ctx.DisabledMetrics
+	collectLogs := s.Ctx.CollectLogs
 	//get service
-	service := s.redfishClient.Service
+	service := s.Ctx.RedfishClient.Service
 
 	// get a list of systems from service
 	if systems, err := service.Systems(); err != nil {
@@ -242,7 +238,7 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 					wg10.Add(len(logServices))
 
 					for _, logService := range logServices {
-						if err = parseLogService(ch, systemMetrics, SystemSubsystem, SystemID, logService, wg10); err != nil {
+						if err = parseLogService(ch, systemMetrics, s.Ctx, systemLogContext, SystemSubsystem, SystemID, logService, wg10); err != nil {
 							systemLogContext.WithField("operation", "system.LogServices()").WithError(err).Error("error getting log entries from log service")
 						}
 					}

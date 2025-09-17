@@ -4,7 +4,10 @@ import (
 	"fmt"
 	"sync"
 
+	"github.com/apex/log"
+	redfish_common "github.com/jenningsloy318/redfish_exporter/common"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stmcginnis/gofish/common"
 	"github.com/stmcginnis/gofish/redfish"
 )
 
@@ -33,7 +36,7 @@ func addToMetricMap(metricMap map[string]Metric, subsystem, name, help string, v
 	}
 }
 
-func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, subsystem, collectorID string, logService *redfish.LogService, wg *sync.WaitGroup) (err error) {
+func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx *redfish_common.CollectionContext, logger *log.Entry, subsystem, collectorID string, logService *redfish.LogService, wg *sync.WaitGroup) (err error) {
 	defer wg.Done()
 	logServiceName := logService.Name
 	logServiceID := logService.ID
@@ -50,8 +53,24 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, sub
 	if logServiceHealthStateValue, ok := parseCommonStatusHealth(logServiceHealthState); ok {
 		ch <- prometheus.MustNewConstMetric(metrics[fmt.Sprintf("%s_%s", subsystem, "log_service_health_state")].desc, prometheus.GaugeValue, logServiceHealthStateValue, logServiceLabelValues...)
 	}
+	var (
+		logEntries []*redfish.LogEntry
+	)
+	logCount, ok := ctx.LogCount[logServiceID]
+	if !ok {
+		logCount, ok = ctx.LogCount["DEFAULT"]
+		if !ok {
+			logCount = -1
+		}
+	}
 
-	logEntries, err := logService.Entries()
+	logger.WithField("operation", "parseLogService").Info(fmt.Sprintf("logServiceID=%s, logcount=%d", logServiceID, logCount))
+
+	if logCount > 0 {
+		logEntries, err = logService.FilteredEntries(common.WithTop(logCount))
+	} else {
+		logEntries, err = logService.Entries()
+	}
 	if err != nil {
 		return
 	}
@@ -65,7 +84,6 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, sub
 			continue
 		}
 		go parseLogEntry(ch, metrics[fmt.Sprintf("%s_%s", subsystem, "log_entry_severity_state")].desc, collectorID, logServiceName, logServiceID, logEntry, wg2)
-
 		processed[logEntry.MessageID] = true
 	}
 	return
