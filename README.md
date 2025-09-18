@@ -1,5 +1,7 @@
 # redfish_exporter
-A prometheus exporter to get  metrics from redfish based servers such as lenovo/dell/Supermicro servers.
+A prometheus exporter to get metrics from redfish based servers.
+
+This is a fork of the original project from https://github.com/jenningsloy318/redfish_exporter
 
 ## Configuration
 
@@ -153,17 +155,6 @@ To build the redfish_exporter executable run the command:
 ```sh
 make build
 ```
-
-or build in centos 7 docker image
-```sh
-make docker-build-centos7
-```
-
-or build in centos 8 docker image
-```sh
-make docker-build-centos8
-```
-or we can also build a docker image  using [Dockerfile](./Dockerfile)
 
 ## Running
 - running directly on linux

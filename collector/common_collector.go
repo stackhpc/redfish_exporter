@@ -5,8 +5,8 @@ import (
 	"sync"
 
 	"github.com/apex/log"
-	redfish_common "github.com/jenningsloy318/redfish_exporter/common"
 	"github.com/prometheus/client_golang/prometheus"
+	redfish_common "github.com/stackhpc/redfish_exporter/common"
 	"github.com/stmcginnis/gofish/common"
 	"github.com/stmcginnis/gofish/redfish"
 )

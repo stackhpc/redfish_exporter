@@ -6,8 +6,8 @@ import (
 	"time"
 
 	alog "github.com/apex/log"
-	"github.com/jenningsloy318/redfish_exporter/common"
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stackhpc/redfish_exporter/common"
 	gofish "github.com/stmcginnis/gofish"
 	gofishcommon "github.com/stmcginnis/gofish/common"
 	redfish "github.com/stmcginnis/gofish/redfish"
