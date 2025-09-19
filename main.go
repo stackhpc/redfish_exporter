@@ -9,13 +9,13 @@ import (
 
 	alog "github.com/apex/log"
 	kitlog "github.com/go-kit/log"
-	"github.com/jenningsloy318/redfish_exporter/collector"
-	"github.com/jenningsloy318/redfish_exporter/common"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/prometheus/common/log"
 	"github.com/prometheus/exporter-toolkit/web"
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
+	"github.com/stackhpc/redfish_exporter/collector"
+	"github.com/stackhpc/redfish_exporter/common"
 	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
@@ -48,7 +48,7 @@ func init() {
 	})
 
 	hostname, _ := os.Hostname()
-	rootLoggerCtx.Infof("version %s, build reversion %s, build branch %s, build at %s on host %s", Version, BuildRevision, BuildBranch, BuildTime, hostname)
+	rootLoggerCtx.Infof("version %s, build revision %s, build branch %s, built at %s on host %s", Version, BuildRevision, BuildBranch, BuildTime, hostname)
 }
 
 func reloadHandler(configLoggerCtx *alog.Entry) http.HandlerFunc {
