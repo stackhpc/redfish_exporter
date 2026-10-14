@@ -1,8 +1,8 @@
 module github.com/stackhpc/redfish_exporter
 
-go 1.21
+go 1.26
 
-toolchain go1.23.4
+toolchain go1.26.0
 
 require (
 	github.com/apex/log v1.9.0
@@ -10,7 +10,7 @@ require (
 	github.com/prometheus/client_golang v1.11.1
 	github.com/prometheus/common v0.26.0
 	github.com/prometheus/exporter-toolkit v0.5.0
-	github.com/stmcginnis/gofish v0.20.0
+	github.com/stmcginnis/gofish v0.27.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
 	gopkg.in/yaml.v2 v2.4.0
 )

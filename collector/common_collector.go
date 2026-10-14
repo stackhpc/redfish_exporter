@@ -7,8 +7,7 @@ import (
 	"github.com/apex/log"
 	"github.com/prometheus/client_golang/prometheus"
 	redfish_common "github.com/stackhpc/redfish_exporter/common"
-	"github.com/stmcginnis/gofish/common"
-	"github.com/stmcginnis/gofish/redfish"
+	"github.com/stmcginnis/gofish/schemas"
 )
 
 const (
@@ -36,7 +35,7 @@ func addToMetricMap(metricMap map[string]Metric, subsystem, name, help string, v
 	}
 }
 
-func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx *redfish_common.CollectionContext, logger *log.Entry, subsystem, collectorID string, logService *redfish.LogService, wg *sync.WaitGroup) (err error) {
+func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx *redfish_common.CollectionContext, logger *log.Entry, subsystem, collectorID string, logService *schemas.LogService, wg *sync.WaitGroup) (err error) {
 	defer wg.Done()
 	logServiceName := logService.Name
 	logServiceID := logService.ID
@@ -54,7 +53,7 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx
 		ch <- prometheus.MustNewConstMetric(metrics[fmt.Sprintf("%s_%s", subsystem, "log_service_health_state")].desc, prometheus.GaugeValue, logServiceHealthStateValue, logServiceLabelValues...)
 	}
 	var (
-		logEntries []*redfish.LogEntry
+		logEntries []*schemas.LogEntry
 	)
 	logCount, ok := ctx.LogCount[logServiceID]
 	if !ok {
@@ -67,7 +66,7 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx
 	logger.WithField("operation", "parseLogService").Info(fmt.Sprintf("logServiceID=%s, logcount=%d", logServiceID, logCount))
 
 	if logCount > 0 {
-		logEntries, err = logService.FilteredEntries(common.WithTop(logCount))
+		//logEntries, err = logService.FilteredEntries(common.WithTop(logCount))
 	} else {
 		logEntries, err = logService.Entries()
 	}
@@ -89,7 +88,7 @@ func parseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx
 	return
 }
 
-func parseLogEntry(ch chan<- prometheus.Metric, desc *prometheus.Desc, collectorID, logServiceName, logServiceID string, logEntry *redfish.LogEntry, wg *sync.WaitGroup) {
+func parseLogEntry(ch chan<- prometheus.Metric, desc *prometheus.Desc, collectorID, logServiceName, logServiceID string, logEntry *schemas.LogEntry, wg *sync.WaitGroup) {
 	defer wg.Done()
 	logEntryName := logEntry.Name
 	logEntryID := logEntry.ID

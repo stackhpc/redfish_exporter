@@ -8,7 +8,7 @@ import (
 	"github.com/apex/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
-	"github.com/stmcginnis/gofish/redfish"
+	"github.com/stmcginnis/gofish/schemas"
 )
 
 // SystemSubsystem is the system subsystem
@@ -168,14 +168,14 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 			if systemTotalProcessorsStateValue, ok := parseCommonStatusState(systemTotalProcessorsState); ok {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_state"].desc, prometheus.GaugeValue, systemTotalProcessorsStateValue, systemLabelValues...)
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_count"].desc, prometheus.GaugeValue, float64(systemTotalProcessorCount), systemLabelValues...)
+				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_count"].desc, prometheus.GaugeValue, float64(*systemTotalProcessorCount), systemLabelValues...)
 			}
 			if systemTotalProcessorsHealthStateValue, ok := parseCommonStatusHealth(systemTotalProcessorsHealthState); ok {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_health_state"].desc, prometheus.GaugeValue, systemTotalProcessorsHealthStateValue, systemLabelValues...)
 			}
 			if systemTotalMemoryStateValue, ok := parseCommonStatusState(systemTotalMemoryState); ok {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_state"].desc, prometheus.GaugeValue, systemTotalMemoryStateValue, systemLabelValues...)
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_size"].desc, prometheus.GaugeValue, float64(systemTotalMemoryAmount), systemLabelValues...)
+				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_size"].desc, prometheus.GaugeValue, float64(*systemTotalMemoryAmount), systemLabelValues...)
 			}
 			if systemTotalMemoryHealthStateValue, ok := parseCommonStatusHealth(systemTotalMemoryHealthState); ok {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_health_state"].desc, prometheus.GaugeValue, systemTotalMemoryHealthStateValue, systemLabelValues...)
@@ -262,7 +262,7 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func processMemory(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg1 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processMemory(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg1 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	memories, err := system.Memory()
 	if err != nil {
 		systemLogContext.WithField("operation", "system.Memory()").WithError(err).Error("error getting memory data from system")
@@ -277,7 +277,7 @@ func processMemory(system *redfish.ComputerSystem, systemLogContext *log.Entry, 
 	}
 }
 
-func processProcessors(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg2 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processProcessors(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg2 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	processors, err := system.Processors()
 	if err != nil {
 		systemLogContext.WithField("operation", "system.Processors()").WithError(err).Error("error getting processor data from system")
@@ -293,7 +293,7 @@ func processProcessors(system *redfish.ComputerSystem, systemLogContext *log.Ent
 	}
 }
 
-func processStorage(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg3 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string, wg4 *sync.WaitGroup) {
+func processStorage(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg3 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string, wg4 *sync.WaitGroup) {
 	storages, err := system.Storage()
 	if err != nil {
 		systemLogContext.WithField("operation", "system.Storage()").WithError(err).Error("error getting storage data from system")
@@ -363,7 +363,7 @@ func processStorage(system *redfish.ComputerSystem, systemLogContext *log.Entry,
 	}
 }
 
-func processPcieDevices(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg5 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processPcieDevices(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg5 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	pcieDevices, err := system.PCIeDevices()
 	if err != nil {
 		systemLogContext.WithField("operation", "system.PCIeDevices()").WithError(err).Error("error getting PCI-E device data from system")
@@ -386,7 +386,7 @@ func processPcieDevices(system *redfish.ComputerSystem, systemLogContext *log.En
 	}
 }
 
-func processPcieFunctions(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg9 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processPcieFunctions(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg9 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	pcieFunctions, err := system.PCIeFunctions()
 	if err != nil {
 		systemLogContext.WithField("operation", "system.PCIeFunctions()").WithError(err).Error("error getting PCI-E device function data from system")
@@ -400,8 +400,8 @@ func processPcieFunctions(system *redfish.ComputerSystem, systemLogContext *log.
 	}
 }
 
-func processSimpleStorage(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg8 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
-	simpleStorages, err := system.SimpleStorages()
+func processSimpleStorage(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg8 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+	simpleStorages, err := system.SimpleStorage()
 	if err != nil {
 		systemLogContext.WithField("operation", "system.SimpleStorages()").WithError(err).Error("error getting simple storage data from system")
 	} else if simpleStorages == nil {
@@ -429,7 +429,7 @@ func processSimpleStorage(system *redfish.ComputerSystem, systemLogContext *log.
 	}
 }
 
-func processEthernetInterfaces(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg7 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processEthernetInterfaces(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg7 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	ethernetInterfaces, err := system.EthernetInterfaces()
 	if err != nil {
 		systemLogContext.WithField("operation", "system.EthernetInterfaces()").WithError(err).Error("error getting ethernet interface data from system")
@@ -443,7 +443,7 @@ func processEthernetInterfaces(system *redfish.ComputerSystem, systemLogContext 
 	}
 }
 
-func processNetworkInterfaces(system *redfish.ComputerSystem, systemLogContext *log.Entry, wg6 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processNetworkInterfaces(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg6 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	networkInterfaces, err := system.NetworkInterfaces()
 	if err != nil {
 		systemLogContext.WithField("operation", "system.NetworkInterfaces()").WithError(err).Error("error getting network interface data from system")
@@ -457,7 +457,7 @@ func processNetworkInterfaces(system *redfish.ComputerSystem, systemLogContext *
 	}
 }
 
-func parseMemory(ch chan<- prometheus.Metric, systemHostName string, memory *redfish.Memory, wg *sync.WaitGroup) {
+func parseMemory(ch chan<- prometheus.Metric, systemHostName string, memory *schemas.Memory, wg *sync.WaitGroup) {
 	defer wg.Done()
 	memoryName := memory.Name
 	memoryID := memory.ID
@@ -473,11 +473,11 @@ func parseMemory(ch chan<- prometheus.Metric, systemHostName string, memory *red
 	if memoryHealthStateValue, ok := parseCommonStatusHealth(memoryHealthState); ok {
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_health_state"].desc, prometheus.GaugeValue, memoryHealthStateValue, systemMemoryLabelValues...)
 	}
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_capacity"].desc, prometheus.GaugeValue, float64(memoryCapacityMiB), systemMemoryLabelValues...)
+	ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_capacity"].desc, prometheus.GaugeValue, float64(*memoryCapacityMiB), systemMemoryLabelValues...)
 
 }
 
-func parseProcessor(ch chan<- prometheus.Metric, systemHostName string, processor *redfish.Processor, wg *sync.WaitGroup) {
+func parseProcessor(ch chan<- prometheus.Metric, systemHostName string, processor *schemas.Processor, wg *sync.WaitGroup) {
 	defer wg.Done()
 	processorName := processor.Name
 	processorID := processor.ID
@@ -494,10 +494,10 @@ func parseProcessor(ch chan<- prometheus.Metric, systemHostName string, processo
 	if processorHelathStateValue, ok := parseCommonStatusHealth(processorHelathState); ok {
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_health_state"].desc, prometheus.GaugeValue, processorHelathStateValue, systemProcessorLabelValues...)
 	}
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_threads"].desc, prometheus.GaugeValue, float64(processorTotalThreads), systemProcessorLabelValues...)
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_cores"].desc, prometheus.GaugeValue, float64(processorTotalCores), systemProcessorLabelValues...)
+	ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_threads"].desc, prometheus.GaugeValue, float64(*processorTotalThreads), systemProcessorLabelValues...)
+	ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_cores"].desc, prometheus.GaugeValue, float64(*processorTotalCores), systemProcessorLabelValues...)
 }
-func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *redfish.Volume, wg *sync.WaitGroup) {
+func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *schemas.Volume, wg *sync.WaitGroup) {
 	defer wg.Done()
 	volumeName := volume.Name
 	volumeID := volume.ID
@@ -511,9 +511,9 @@ func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *red
 	if volumeHealthStateValue, ok := parseCommonStatusHealth(volumeHealthState); ok {
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_health_state"].desc, prometheus.GaugeValue, volumeHealthStateValue, systemVolumeLabelValues...)
 	}
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_capacity"].desc, prometheus.GaugeValue, float64(volumeCapacityBytes), systemVolumeLabelValues...)
+	ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_capacity"].desc, prometheus.GaugeValue, float64(*volumeCapacityBytes), systemVolumeLabelValues...)
 }
-func parseDevice(ch chan<- prometheus.Metric, systemHostName string, device redfish.Device, wg *sync.WaitGroup) {
+func parseDevice(ch chan<- prometheus.Metric, systemHostName string, device schemas.Device, wg *sync.WaitGroup) {
 	defer wg.Done()
 	deviceName := device.Name
 	deviceState := device.Status.State
@@ -526,7 +526,7 @@ func parseDevice(ch chan<- prometheus.Metric, systemHostName string, device redf
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_simple_storage_device_health_state"].desc, prometheus.GaugeValue, deviceHealthStateValue, systemDeviceLabelValues...)
 	}
 }
-func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *redfish.Drive, wg *sync.WaitGroup) {
+func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schemas.Drive, wg *sync.WaitGroup) {
 	defer wg.Done()
 	driveName := drive.Name
 	driveID := drive.ID
@@ -540,10 +540,10 @@ func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *redfi
 	if driveHealthStateValue, ok := parseCommonStatusHealth(driveHealthState); ok {
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_health_state"].desc, prometheus.GaugeValue, driveHealthStateValue, systemdriveLabelValues...)
 	}
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_capacity"].desc, prometheus.GaugeValue, float64(driveCapacityBytes), systemdriveLabelValues...)
+	ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_capacity"].desc, prometheus.GaugeValue, float64(*driveCapacityBytes), systemdriveLabelValues...)
 }
 
-func parsePcieDevice(ch chan<- prometheus.Metric, systemHostName string, pcieDevice *redfish.PCIeDevice, wg *sync.WaitGroup) {
+func parsePcieDevice(ch chan<- prometheus.Metric, systemHostName string, pcieDevice *schemas.PCIeDevice, wg *sync.WaitGroup) {
 	defer wg.Done()
 	pcieDeviceName := pcieDevice.Name
 	pcieDeviceID := pcieDevice.ID
@@ -562,7 +562,7 @@ func parsePcieDevice(ch chan<- prometheus.Metric, systemHostName string, pcieDev
 	}
 }
 
-func parseNetworkInterface(ch chan<- prometheus.Metric, systemHostName string, networkInterface *redfish.NetworkInterface, wg *sync.WaitGroup) {
+func parseNetworkInterface(ch chan<- prometheus.Metric, systemHostName string, networkInterface *schemas.NetworkInterface, wg *sync.WaitGroup) {
 	defer wg.Done()
 	networkInterfaceName := networkInterface.Name
 	networkInterfaceID := networkInterface.ID
@@ -578,7 +578,7 @@ func parseNetworkInterface(ch chan<- prometheus.Metric, systemHostName string, n
 	}
 }
 
-func parseEthernetInterface(ch chan<- prometheus.Metric, systemHostName string, ethernetInterface *redfish.EthernetInterface, wg *sync.WaitGroup) {
+func parseEthernetInterface(ch chan<- prometheus.Metric, systemHostName string, ethernetInterface *schemas.EthernetInterface, wg *sync.WaitGroup) {
 	defer wg.Done()
 	//ethernetInterfaceODataIDslice := strings.Split(ethernetInterface.ODataID, "/")
 	//ethernetInterfaceName := ethernetInterfaceODataIDslice[len(ethernetInterfaceODataIDslice)-1]
@@ -603,7 +603,7 @@ func parseEthernetInterface(ch chan<- prometheus.Metric, systemHostName string, 
 	ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_link_enabled"].desc, prometheus.GaugeValue, boolToFloat64(ethernetInterfaceEnabled), systemEthernetInterfaceLabelValues...)
 }
 
-func parsePcieFunction(ch chan<- prometheus.Metric, systemHostName string, pcieFunction *redfish.PCIeFunction, wg *sync.WaitGroup) {
+func parsePcieFunction(ch chan<- prometheus.Metric, systemHostName string, pcieFunction *schemas.PCIeFunction, wg *sync.WaitGroup) {
 	defer wg.Done()
 	pcieFunctionName := pcieFunction.Name
 	pcieFunctionID := fmt.Sprint(pcieFunction.ID)

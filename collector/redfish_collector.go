@@ -8,9 +8,8 @@ import (
 	alog "github.com/apex/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
-	gofish "github.com/stmcginnis/gofish"
-	gofishcommon "github.com/stmcginnis/gofish/common"
-	redfish "github.com/stmcginnis/gofish/redfish"
+	"github.com/stmcginnis/gofish"
+	"github.com/stmcginnis/gofish/schemas"
 )
 
 // Metric name parts.
@@ -95,7 +94,7 @@ func (r *RedfishCollector) Collect(ch chan<- prometheus.Metric) {
 	ch <- prometheus.MustNewConstMetric(totalScrapeDurationDesc, prometheus.GaugeValue, time.Since(scrapeTime).Seconds())
 }
 
-func parseCommonStatusHealth(status gofishcommon.Health) (float64, bool) {
+func parseCommonStatusHealth(status schemas.Health) (float64, bool) {
 	if bytes.Equal([]byte(status), []byte("OK")) {
 		return float64(1), true
 	} else if bytes.Equal([]byte(status), []byte("Warning")) {
@@ -106,7 +105,7 @@ func parseCommonStatusHealth(status gofishcommon.Health) (float64, bool) {
 	return float64(0), false
 }
 
-func parseCommonStatusState(status gofishcommon.State) (float64, bool) {
+func parseCommonStatusState(status schemas.State) (float64, bool) {
 
 	if bytes.Equal([]byte(status), []byte("")) {
 		return float64(0), false
@@ -136,7 +135,7 @@ func parseCommonStatusState(status gofishcommon.State) (float64, bool) {
 	return float64(0), false
 }
 
-func parseCommonSeverityState(severity redfish.EventSeverity) (float64, bool) {
+func parseCommonSeverityState(severity schemas.EventSeverity) (float64, bool) {
 	if bytes.Equal([]byte(severity), []byte("OK")) {
 		return float64(1), true
 	} else if bytes.Equal([]byte(severity), []byte("Warning")) {
@@ -147,7 +146,7 @@ func parseCommonSeverityState(severity redfish.EventSeverity) (float64, bool) {
 	return float64(0), false
 }
 
-func parseCommonPowerState(status redfish.PowerState) (float64, bool) {
+func parseCommonPowerState(status schemas.PowerState) (float64, bool) {
 	if bytes.Equal([]byte(status), []byte("On")) {
 		return float64(1), true
 	} else if bytes.Equal([]byte(status), []byte("Off")) {
@@ -160,7 +159,7 @@ func parseCommonPowerState(status redfish.PowerState) (float64, bool) {
 	return float64(0), false
 }
 
-func parseLinkStatus(status redfish.LinkStatus) (float64, bool) {
+func parseLinkStatus(status schemas.LinkStatus) (float64, bool) {
 	if bytes.Equal([]byte(status), []byte("LinkUp")) {
 		return float64(1), true
 	} else if bytes.Equal([]byte(status), []byte("NoLink")) {
@@ -171,7 +170,7 @@ func parseLinkStatus(status redfish.LinkStatus) (float64, bool) {
 	return float64(0), false
 }
 
-func parsePortLinkStatus(status redfish.NetworkPortLinkStatus) (float64, bool) {
+func parsePortLinkStatus(status schemas.NetworkPortLinkStatus) (float64, bool) {
 	if bytes.Equal([]byte(status), []byte("Up")) {
 		return float64(1), true
 	}
@@ -186,7 +185,7 @@ func boolToFloat64(data bool) float64 {
 
 }
 
-func parsePhySecReArmMethod(method redfish.IntrusionSensorReArm) (float64, bool) {
+func parsePhySecReArmMethod(method schemas.IntrusionSensorReArm) (float64, bool) {
 	if bytes.Equal([]byte(method), []byte("Manual")) {
 		return float64(1), true
 	}
@@ -197,7 +196,7 @@ func parsePhySecReArmMethod(method redfish.IntrusionSensorReArm) (float64, bool)
 	return float64(0), false
 }
 
-func parsePhySecIntrusionSensor(method redfish.IntrusionSensor) (float64, bool) {
+func parsePhySecIntrusionSensor(method schemas.IntrusionSensor) (float64, bool) {
 	if bytes.Equal([]byte(method), []byte("Normal")) {
 		return float64(1), true
 	}

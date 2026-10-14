@@ -1,4 +1,4 @@
-FROM golang:1.24.2 AS builder
+FROM golang:1.26.0 AS builder
 
 ARG ARCH=amd64
 
@@ -8,7 +8,7 @@ RUN mkdir -p /go/src/github.com/ && \
     cd /go/src/github.com/stackhpc/redfish_exporter && \
     make build
 
-FROM golang:1.24.2
+FROM golang:1.26.0
 
 COPY --from=builder /go/src/github.com/stackhpc/redfish_exporter/build/redfish_exporter /usr/local/bin/redfish_exporter
 RUN mkdir /etc/prometheus
