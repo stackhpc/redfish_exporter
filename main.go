@@ -33,10 +33,7 @@ var (
 		"Path to configuration file.",
 	).String()
 	webConfig = webflag.AddFlags(kingpin.CommandLine, ":9610")
-	// listenAddress = kingpin.Flag(
-	// 	"web.listen-address",
-	// 	"Address to listen on for web interface and telemetry.",
-	// ).Default(":9610").String()
+
 	sc = &common.SafeConfig{
 		C: &common.Config{},
 	}
