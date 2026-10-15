@@ -1,16 +1,15 @@
-FROM golang:1.24.2 AS builder
+FROM golang:1.26.0 AS builder
 
 ARG ARCH=amd64
 
 # Build binary
-RUN mkdir -p /go/src/github.com/ && \
-    git clone https://github.com/stackhpc/redfish_exporter /go/src/github.com/stackhpc/redfish_exporter && \
-    cd /go/src/github.com/stackhpc/redfish_exporter && \
-    make build
+WORKDIR /
+ADD . .
+RUN make build
 
-FROM golang:1.24.2
+FROM golang:1.26.0
 
-COPY --from=builder /go/src/github.com/stackhpc/redfish_exporter/build/redfish_exporter /usr/local/bin/redfish_exporter
+COPY --from=builder /build/redfish_exporter /usr/local/bin/redfish_exporter
 RUN mkdir /etc/prometheus
-COPY --from=builder /go/src/github.com/stackhpc/redfish_exporter/config.yml.example /etc/prometheus/redfish_exporter.yml
+COPY --from=builder /config.yml.example /etc/prometheus/redfish_exporter.yml
 CMD ["/usr/local/bin/redfish_exporter","--config.file","/etc/prometheus/redfish_exporter.yml"]
