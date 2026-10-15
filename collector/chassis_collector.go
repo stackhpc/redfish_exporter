@@ -294,9 +294,15 @@ func parseChassisFan(ch chan<- prometheus.Metric, chassisID string, chassisFan s
 	var chassisFanPercentage *float64
 	switch chassisFan.ReadingUnits {
 	case schemas.PercentReadingUnits:
+		if chassisFan.Reading == nil {
+			break
+		}
 		chassisFanPercentage = new(float64)
 		*chassisFanPercentage = float64(*chassisFan.Reading)
 	case schemas.RPMReadingUnits: // Calculate fan percentage from best value for min/max
+		if chassisFan.Reading == nil {
+			break
+		}
 		// Some vendors (e.g. PowerEdge C6420) report null RPMs for Min/Max, as well as Lower/UpperFatal,
 		// but provide Lower/UpperCritical, so we use the most extreme value we have as the limits.
 		var min *int = chassisFan.MinReadingRange
@@ -367,26 +373,22 @@ func parseChassisFan(ch chan<- prometheus.Metric, chassisID string, chassisFan s
 	}
 }
 
-func parseChassisPowerInfoVoltage(ch chan<- prometheus.Metric, chassisID string, chassisPowerInfoVoltage schemas.Voltage, wg *sync.WaitGroup) {
+func parseChassisPowerInfoVoltage(ch chan<- prometheus.Metric, chassisID string, voltageInfo schemas.Voltage, wg *sync.WaitGroup) {
 	defer wg.Done()
-	chassisPowerInfoVoltageName := chassisPowerInfoVoltage.Name
-	chassisPowerInfoVoltageID := chassisPowerInfoVoltage.MemberID
-	chassisPowerInfoVoltageNameReadingVolts := chassisPowerInfoVoltage.ReadingVolts
-	chassisPowerInfoVoltageState := chassisPowerInfoVoltage.Status.State
-	chassisPowerVoltageLabelvalues := []string{"power_voltage", chassisID, chassisPowerInfoVoltageName, chassisPowerInfoVoltageID}
-	if chassisPowerInfoVoltageStateValue, ok := parseCommonStatusState(chassisPowerInfoVoltageState); ok {
+	voltageInfoID := voltageInfo.MemberID
+	chassisPowerVoltageLabelvalues := []string{"power_voltage", chassisID, voltageInfo.Name, voltageInfoID}
+	if chassisPowerInfoVoltageStateValue, ok := parseCommonStatusState(voltageInfo.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_voltage_state"].desc, prometheus.GaugeValue, chassisPowerInfoVoltageStateValue, chassisPowerVoltageLabelvalues...)
 	}
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_voltage_volts"].desc, prometheus.GaugeValue, float64(*chassisPowerInfoVoltageNameReadingVolts), chassisPowerVoltageLabelvalues...)
+	if voltageInfo.ReadingVolts != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_voltage_volts"].desc, prometheus.GaugeValue, float64(*voltageInfo.ReadingVolts), chassisPowerVoltageLabelvalues...)
+	}
 }
 
-func parseChassisPowerInfoPowerControl(ch chan<- prometheus.Metric, chassisID string, chassisPowerInfoPowerControl schemas.PowerControl, wg *sync.WaitGroup) {
+func parseChassisPowerInfoPowerControl(ch chan<- prometheus.Metric, chassisID string, powerControl schemas.PowerControl, wg *sync.WaitGroup) {
 	defer wg.Done()
-	name := chassisPowerInfoPowerControl.Name
-	id := chassisPowerInfoPowerControl.MemberID
-	pm := chassisPowerInfoPowerControl.PowerMetrics
-	chassisPowerVoltageLabelvalues := []string{"power_wattage", chassisID, name, id}
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_average_consumed_watts"].desc, prometheus.GaugeValue, float64(*pm.AverageConsumedWatts), chassisPowerVoltageLabelvalues...)
+	chassisPowerVoltageLabelvalues := []string{"power_wattage", chassisID, powerControl.Name, powerControl.MemberID}
+	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_average_consumed_watts"].desc, prometheus.GaugeValue, float64(*powerControl.PowerMetrics.AverageConsumedWatts), chassisPowerVoltageLabelvalues...)
 }
 
 func parseChassisPowerInfoPowerSupply(ch chan<- prometheus.Metric, chassisID string, powerSupply schemas.PowerSupply, wg *sync.WaitGroup) {

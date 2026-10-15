@@ -149,12 +149,10 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			systemPowerState := system.PowerState
 			systemState := system.Status.State
 			systemHealthState := system.Status.Health
-			systemTotalProcessorCount := system.ProcessorSummary.Count
 			systemTotalProcessorsState := system.ProcessorSummary.Status.State
 			systemTotalProcessorsHealthState := system.ProcessorSummary.Status.Health
 			systemTotalMemoryState := system.MemorySummary.Status.State
 			systemTotalMemoryHealthState := system.MemorySummary.Status.Health
-			systemTotalMemoryAmount := system.MemorySummary.TotalSystemMemoryGiB
 
 			systemLabelValues := []string{systemHostName, "system", SystemID}
 			if systemHealthStateValue, ok := parseCommonStatusHealth(systemHealthState); ok {
@@ -168,14 +166,18 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 			if systemTotalProcessorsStateValue, ok := parseCommonStatusState(systemTotalProcessorsState); ok {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_state"].desc, prometheus.GaugeValue, systemTotalProcessorsStateValue, systemLabelValues...)
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_count"].desc, prometheus.GaugeValue, float64(*systemTotalProcessorCount), systemLabelValues...)
+				if system.ProcessorSummary.Count != nil {
+					ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_count"].desc, prometheus.GaugeValue, float64(*system.ProcessorSummary.Count), systemLabelValues...)
+				}
 			}
 			if systemTotalProcessorsHealthStateValue, ok := parseCommonStatusHealth(systemTotalProcessorsHealthState); ok {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_health_state"].desc, prometheus.GaugeValue, systemTotalProcessorsHealthStateValue, systemLabelValues...)
 			}
 			if systemTotalMemoryStateValue, ok := parseCommonStatusState(systemTotalMemoryState); ok {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_state"].desc, prometheus.GaugeValue, systemTotalMemoryStateValue, systemLabelValues...)
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_size"].desc, prometheus.GaugeValue, float64(*systemTotalMemoryAmount), systemLabelValues...)
+				if system.MemorySummary.TotalSystemMemoryGiB != nil {
+					ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_size"].desc, prometheus.GaugeValue, float64(*system.MemorySummary.TotalSystemMemoryGiB), systemLabelValues...)
+				}
 			}
 			if systemTotalMemoryHealthStateValue, ok := parseCommonStatusHealth(systemTotalMemoryHealthState); ok {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_health_state"].desc, prometheus.GaugeValue, systemTotalMemoryHealthStateValue, systemLabelValues...)
@@ -505,7 +507,6 @@ func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *sch
 	defer wg.Done()
 	volumeName := volume.Name
 	volumeID := volume.ID
-	volumeCapacityBytes := volume.CapacityBytes
 	volumeState := volume.Status.State
 	volumeHealthState := volume.Status.Health
 	systemVolumeLabelValues := []string{systemHostName, "volume", volumeName, volumeID}
@@ -515,7 +516,9 @@ func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *sch
 	if volumeHealthStateValue, ok := parseCommonStatusHealth(volumeHealthState); ok {
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_health_state"].desc, prometheus.GaugeValue, volumeHealthStateValue, systemVolumeLabelValues...)
 	}
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_capacity"].desc, prometheus.GaugeValue, float64(*volumeCapacityBytes), systemVolumeLabelValues...)
+	if volume.CapacityBytes != nil {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_capacity"].desc, prometheus.GaugeValue, float64(*volume.CapacityBytes), systemVolumeLabelValues...)
+	}
 }
 func parseDevice(ch chan<- prometheus.Metric, systemHostName string, device schemas.Device, wg *sync.WaitGroup) {
 	defer wg.Done()
@@ -534,7 +537,6 @@ func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schem
 	defer wg.Done()
 	driveName := drive.Name
 	driveID := drive.ID
-	driveCapacityBytes := drive.CapacityBytes
 	driveState := drive.Status.State
 	driveHealthState := drive.Status.Health
 	systemdriveLabelValues := []string{systemHostName, "drive", driveName, driveID}
@@ -544,7 +546,9 @@ func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schem
 	if driveHealthStateValue, ok := parseCommonStatusHealth(driveHealthState); ok {
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_health_state"].desc, prometheus.GaugeValue, driveHealthStateValue, systemdriveLabelValues...)
 	}
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_capacity"].desc, prometheus.GaugeValue, float64(*driveCapacityBytes), systemdriveLabelValues...)
+	if drive.CapacityBytes != nil {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_capacity"].desc, prometheus.GaugeValue, float64(*drive.CapacityBytes), systemdriveLabelValues...)
+	}
 }
 
 func parsePcieDevice(ch chan<- prometheus.Metric, systemHostName string, pcieDevice *schemas.PCIeDevice, wg *sync.WaitGroup) {
