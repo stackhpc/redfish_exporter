@@ -2,10 +2,10 @@ package collector
 
 import (
 	"bytes"
+	"log/slog"
 	"sync"
 	"time"
 
-	alog "github.com/apex/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
 	"github.com/stmcginnis/gofish"
@@ -39,7 +39,7 @@ type RedfishCollector struct {
 }
 
 // NewRedfishCollector return RedfishCollector
-func NewRedfishCollector(ctx *common.CollectionContext, logger *alog.Entry) *RedfishCollector {
+func NewRedfishCollector(ctx *common.CollectionContext, logger *slog.Logger) *RedfishCollector {
 	var collectors map[string]prometheus.Collector
 	chassisCollector := NewChassisCollector(ctx, logger)
 	systemCollector := NewSystemCollector(ctx, logger)

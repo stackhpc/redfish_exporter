@@ -2,10 +2,10 @@ package collector
 
 import (
 	"fmt"
+	"log/slog"
 	"slices"
 	"sync"
 
-	"github.com/apex/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
 	"github.com/stmcginnis/gofish/schemas"
@@ -38,7 +38,7 @@ type SystemCollector struct {
 	metrics map[string]Metric
 	prometheus.Collector
 	collectorScrapeStatus *prometheus.GaugeVec
-	Log                   *log.Entry
+	Log                   *slog.Logger
 }
 
 func createSystemMetricMap() map[string]Metric {
@@ -101,13 +101,13 @@ func createSystemMetricMap() map[string]Metric {
 }
 
 // NewSystemCollector returns a collector that collecting memory statistics
-func NewSystemCollector(ctx *common.CollectionContext, logger *log.Entry) *SystemCollector {
+func NewSystemCollector(ctx *common.CollectionContext, logger *slog.Logger) *SystemCollector {
 	return &SystemCollector{
 		metrics: systemMetrics,
 		Ctx:     ctx,
-		Log: logger.WithFields(log.Fields{
-			"collector": "SystemCollector",
-		}),
+		Log: logger.With(
+			"collector", "SystemCollector",
+		),
 		collectorScrapeStatus: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
@@ -137,10 +137,10 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 
 	// get a list of systems from service
 	if systems, err := service.Systems(); err != nil {
-		collectorLogContext.WithField("operation", "service.Systems()").WithError(err).Error("error getting systems from service")
+		collectorLogContext.Error("error getting systems from service", "operation", "service.Systems()", "err", err)
 	} else {
 		for _, system := range systems {
-			systemLogContext := collectorLogContext.WithField("System", system.ID)
+			systemLogContext := collectorLogContext.With("System", system.ID)
 			systemLogContext.Info("collector scrape started")
 			// overall system metrics
 
@@ -231,15 +231,15 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			if collectLogs {
 				logServices, err := system.LogServices()
 				if err != nil {
-					systemLogContext.WithField("operation", "system.LogServices()").WithError(err).Error("error getting log services from system")
+					systemLogContext.Error("error getting log services from system", "operation", "system.LogServices()", "err", err)
 				} else if logServices == nil {
-					systemLogContext.WithField("operation", "system.LogServices()").Info("no log services found")
+					systemLogContext.Info("no log services found", "operation", "system.LogServices()")
 				} else {
 					wg10.Add(len(logServices))
 
 					for _, logService := range logServices {
 						if err = parseLogService(ch, systemMetrics, s.Ctx, systemLogContext, SystemSubsystem, SystemID, logService, wg10); err != nil {
-							systemLogContext.WithField("operation", "system.LogServices()").WithError(err).Error("error getting log entries from log service")
+							systemLogContext.Error("error getting log entries from log service", "operation", "system.LogServices()", "err", err)
 						}
 					}
 				}
@@ -262,12 +262,12 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 	}
 }
 
-func processMemory(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg1 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processMemory(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg1 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	memories, err := system.Memory()
 	if err != nil {
-		systemLogContext.WithField("operation", "system.Memory()").WithError(err).Error("error getting memory data from system")
+		systemLogContext.Error("error getting memory data from system", "operation", "system.Memory()", "err", err)
 	} else if memories == nil {
-		systemLogContext.WithField("operation", "system.Memory()").Info("no memory data found")
+		systemLogContext.Info("no memory data found", "operation", "system.Memory()")
 	} else {
 		wg1.Add(len(memories))
 
@@ -277,12 +277,12 @@ func processMemory(system *schemas.ComputerSystem, systemLogContext *log.Entry, 
 	}
 }
 
-func processProcessors(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg2 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processProcessors(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg2 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	processors, err := system.Processors()
 	if err != nil {
-		systemLogContext.WithField("operation", "system.Processors()").WithError(err).Error("error getting processor data from system")
+		systemLogContext.Error("error getting processor data from system", "operation", "system.Processors()", "err", err)
 	} else if processors == nil {
-		systemLogContext.WithField("operation", "system.Processors()").Info("no processor data found")
+		systemLogContext.Info("no processor data found", "operation", "system.Processors()")
 	} else {
 		wg2.Add(len(processors))
 
@@ -293,24 +293,24 @@ func processProcessors(system *schemas.ComputerSystem, systemLogContext *log.Ent
 	}
 }
 
-func processStorage(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg3 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string, wg4 *sync.WaitGroup) {
+func processStorage(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg3 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string, wg4 *sync.WaitGroup) {
 	storages, err := system.Storage()
 	if err != nil {
-		systemLogContext.WithField("operation", "system.Storage()").WithError(err).Error("error getting storage data from system")
+		systemLogContext.Error("error getting storage data from system", "operation", "system.Storage()", "err", err)
 	} else if storages == nil {
-		systemLogContext.WithField("operation", "system.Storage()").Info("no storage data found")
+		systemLogContext.Info("no storage data found", "operation", "system.Storage()")
 	} else {
 		processed := make(map[string]bool)
 		for _, storage := range storages {
 			if volumes, err := storage.Volumes(); err != nil {
-				systemLogContext.WithField("operation", "system.Volumes()").WithError(err).Error("error getting storage data from system")
+				systemLogContext.Error("error getting storage data from system", "operation", "system.Volumes()", "err", err)
 			} else {
 				wg3.Add(len(volumes))
 
 				for _, volume := range volumes {
 					_, exists := processed[volume.Name]
 					if exists {
-						systemLogContext.WithField("operation",
+						systemLogContext.With("operation",
 							"system.Storage()").Info(fmt.Sprintf("Ignoring "+
 							"duplicate storage volume: %s. Please check whether this "+
 							"volume is returning duplicate data and report to the vendor.",
@@ -325,9 +325,9 @@ func processStorage(system *schemas.ComputerSystem, systemLogContext *log.Entry,
 
 			drives, err := storage.Drives()
 			if err != nil {
-				systemLogContext.WithField("operation", "system.Drives()").WithError(err).Error("error getting drive data from system")
+				systemLogContext.Error("error getting drive data from system", "operation", "system.Drives()", "err", err)
 			} else if drives == nil {
-				systemLogContext.WithFields(log.Fields{"operation": "system.Drives()", "storage": storage.ID}).Info("no drive data found")
+				systemLogContext.Info("no drive data found", "operation", "system.Drives()", "storage", storage.ID)
 			} else {
 				wg4.Add(len(drives))
 				for _, drive := range drives {
@@ -363,12 +363,12 @@ func processStorage(system *schemas.ComputerSystem, systemLogContext *log.Entry,
 	}
 }
 
-func processPcieDevices(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg5 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processPcieDevices(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg5 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	pcieDevices, err := system.PCIeDevices()
 	if err != nil {
-		systemLogContext.WithField("operation", "system.PCIeDevices()").WithError(err).Error("error getting PCI-E device data from system")
+		systemLogContext.Error("error getting PCI-E device data from system", "operation", "system.PCIeDevices()", "err", err)
 	} else if pcieDevices == nil {
-		systemLogContext.WithField("operation", "system.PCIeDevices()").Info("no PCI-E device data found")
+		systemLogContext.Info("no PCI-E device data found", "operation", "system.PCIeDevices()")
 	} else {
 		processed := make(map[string]bool)
 		wg5.Add(len(pcieDevices))
@@ -376,7 +376,7 @@ func processPcieDevices(system *schemas.ComputerSystem, systemLogContext *log.En
 		for _, pcieDevice := range pcieDevices {
 			_, exists := processed[pcieDevice.ODataID]
 			if exists {
-				systemLogContext.WithField("operation", "system.PCIeDevices()").Info(fmt.Sprintf("Ignoring duplicate pci device: %s", pcieDevice.ODataID))
+				systemLogContext.Info(fmt.Sprintf("Ignoring duplicate pci device: %s", pcieDevice.ODataID), "operation", "system.PCIeDevices()")
 				wg5.Done()
 				continue
 			}
@@ -386,12 +386,12 @@ func processPcieDevices(system *schemas.ComputerSystem, systemLogContext *log.En
 	}
 }
 
-func processPcieFunctions(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg9 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processPcieFunctions(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg9 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	pcieFunctions, err := system.PCIeFunctions()
 	if err != nil {
-		systemLogContext.WithField("operation", "system.PCIeFunctions()").WithError(err).Error("error getting PCI-E device function data from system")
+		systemLogContext.Error("error getting PCI-E device function data from system", "operation", "system.PCIEFunctions()", "err", err)
 	} else if pcieFunctions == nil {
-		systemLogContext.WithField("operation", "system.PCIeFunctions()").Info("no PCI-E device function data found")
+		systemLogContext.Info("no PCI-E device function data found", "operation", "system.PCIeFunctions()")
 	} else {
 		wg9.Add(len(pcieFunctions))
 		for _, pcieFunction := range pcieFunctions {
@@ -400,12 +400,12 @@ func processPcieFunctions(system *schemas.ComputerSystem, systemLogContext *log.
 	}
 }
 
-func processSimpleStorage(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg8 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processSimpleStorage(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg8 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	simpleStorages, err := system.SimpleStorage()
 	if err != nil {
-		systemLogContext.WithField("operation", "system.SimpleStorages()").WithError(err).Error("error getting simple storage data from system")
+		systemLogContext.Error("error getting simple storage data from system", "operation", "system.SimpleStorages()", "err", err)
 	} else if simpleStorages == nil {
-		systemLogContext.WithField("operation", "system.SimpleStorages()").Info("no simple storage data found")
+		systemLogContext.Info("no simple storage data found", "operation", "system.SimpleStorages()")
 	} else {
 		processed := make(map[string]bool)
 		for _, simpleStorage := range simpleStorages {
@@ -414,7 +414,7 @@ func processSimpleStorage(system *schemas.ComputerSystem, systemLogContext *log.
 			for _, device := range devices {
 				_, exists := processed[device.Name]
 				if exists {
-					systemLogContext.WithField("operation",
+					systemLogContext.With("operation",
 						"system.SimpleStorages()").Info(fmt.Sprintf("Ignoring "+
 						"duplicate storage device: %s. Please check whether this "+
 						"device is returning duplicate data and report to the vendor.",
@@ -429,12 +429,12 @@ func processSimpleStorage(system *schemas.ComputerSystem, systemLogContext *log.
 	}
 }
 
-func processEthernetInterfaces(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg7 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processEthernetInterfaces(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg7 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	ethernetInterfaces, err := system.EthernetInterfaces()
 	if err != nil {
-		systemLogContext.WithField("operation", "system.EthernetInterfaces()").WithError(err).Error("error getting ethernet interface data from system")
+		systemLogContext.Error("error getting ethernet interface data from system", "operation", "system.EthernetInterfaces()", "err", err)
 	} else if ethernetInterfaces == nil {
-		systemLogContext.WithField("operation", "system.PCIeDevices()").Info("no ethernet interface data found")
+		systemLogContext.Info("no ethernet interface data found", "operation", "system.PCIeDevices()")
 	} else {
 		wg7.Add(len(ethernetInterfaces))
 		for _, ethernetInterface := range ethernetInterfaces {
@@ -443,12 +443,12 @@ func processEthernetInterfaces(system *schemas.ComputerSystem, systemLogContext 
 	}
 }
 
-func processNetworkInterfaces(system *schemas.ComputerSystem, systemLogContext *log.Entry, wg6 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
+func processNetworkInterfaces(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg6 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	networkInterfaces, err := system.NetworkInterfaces()
 	if err != nil {
-		systemLogContext.WithField("operation", "system.NetworkInterfaces()").WithError(err).Error("error getting network interface data from system")
+		systemLogContext.Error("error getting network interface data from system", "operation", "system.NetworkInterfaces()", "err", err)
 	} else if networkInterfaces == nil {
-		systemLogContext.WithField("operation", "system.NetworkInterfaces()").Info("no network interface data found")
+		systemLogContext.Info("no network interface data found", "operation", "system.NetworkInterfaces()")
 	} else {
 		wg6.Add(len(networkInterfaces))
 		for _, networkInterface := range networkInterfaces {
