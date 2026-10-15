@@ -3,7 +3,6 @@ package collector
 import (
 	"fmt"
 	"log/slog"
-	"math"
 	"strings"
 	"sync"
 
@@ -282,58 +281,90 @@ func parseChassisTemperature(ch chan<- prometheus.Metric, chassisID string, chas
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_temperature_sensor_state"].desc, prometheus.GaugeValue, chassisTemperatureStatusStateValue, chassisTemperatureLabelvalues...)
 	}
 
-	chassisTemperatureReadingCelsius := chassisTemperature.ReadingCelsius
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_temperature_celsius"].desc, prometheus.GaugeValue, float64(*chassisTemperatureReadingCelsius), chassisTemperatureLabelvalues...)
+	if chassisTemperature.ReadingCelsius != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_temperature_celsius"].desc, prometheus.GaugeValue, float64(*chassisTemperature.ReadingCelsius), chassisTemperatureLabelvalues...)
+	}
 }
 
 func parseChassisFan(ch chan<- prometheus.Metric, chassisID string, chassisFan schemas.ThermalFan, wg *sync.WaitGroup) {
 	defer wg.Done()
 	chassisFanID := chassisFan.MemberID
-	chassisFanName := chassisFan.Name
-	chassisFanStaus := chassisFan.Status
-	chassisFanStausHealth := chassisFanStaus.Health
-	chassisFanStausState := chassisFanStaus.State
-	chassisFanRPM := float64(*chassisFan.Reading)
-	chassisFanUnit := chassisFan.ReadingUnits
-	chassisFanRPMLowerCriticalThreshold := float64(*chassisFan.LowerThresholdCritical)
-	chassisFanRPMUpperCriticalThreshold := float64(*chassisFan.UpperThresholdCritical)
-	chassisFanRPMLowerFatalThreshold := float64(*chassisFan.LowerThresholdFatal)
-	chassisFanRPMUpperFatalThreshold := float64(*chassisFan.UpperThresholdFatal)
-	chassisFanRPMMin := float64(*chassisFan.MinReadingRange)
-	chassisFanRPMMax := float64(*chassisFan.MaxReadingRange)
+	chassisFanLabelvalues := []string{"fan", chassisID, chassisFan.Name, chassisFanID, strings.ToLower(string(chassisFan.ReadingUnits))} // e.g. RPM -> rpm, Percentage -> percentage
 
-	chassisFanPercentage := chassisFanRPM
-	if chassisFanUnit != schemas.PercentReadingUnits {
+	var chassisFanPercentage *float64
+	switch chassisFan.ReadingUnits {
+	case schemas.PercentReadingUnits:
+		chassisFanPercentage = new(float64)
+		*chassisFanPercentage = float64(*chassisFan.Reading)
+	case schemas.RPMReadingUnits: // Calculate fan percentage from best value for min/max
 		// Some vendors (e.g. PowerEdge C6420) report null RPMs for Min/Max, as well as Lower/UpperFatal,
-		// but provide Lower/UpperCritical, so use largest non-null for max. However, we can't know if
-		// min is null (reported as zero by gofish) or just zero, so we'll have to assume a min of zero
-		// if Min is not reported...
-		min := chassisFanRPMMin
-		max := math.Max(math.Max(chassisFanRPMMax, chassisFanRPMUpperFatalThreshold), chassisFanRPMUpperCriticalThreshold)
-		chassisFanPercentage = 0
-		if max != 0 {
-			chassisFanPercentage = float64((chassisFanRPM+min)/max) * 100
+		// but provide Lower/UpperCritical, so we use the most extreme value we have as the limits.
+		var min *int = chassisFan.MinReadingRange
+		var max *int = chassisFan.MaxReadingRange
+		if chassisFan.LowerThresholdCritical != nil && (min == nil || *min > *chassisFan.LowerThresholdCritical) {
+			min = chassisFan.LowerThresholdCritical
 		}
+		if chassisFan.LowerThresholdFatal != nil && (min == nil || *min > *chassisFan.LowerThresholdFatal) {
+			min = chassisFan.LowerThresholdFatal
+		}
+		if chassisFan.LowerThresholdNonCritical != nil && (min == nil || *min > *chassisFan.LowerThresholdNonCritical) {
+			min = chassisFan.LowerThresholdNonCritical
+		}
+		if chassisFan.UpperThresholdCritical != nil && (max == nil || *max < *chassisFan.UpperThresholdCritical) {
+			max = chassisFan.UpperThresholdCritical
+		}
+		if chassisFan.UpperThresholdFatal != nil && (max == nil || *max < *chassisFan.UpperThresholdFatal) {
+			max = chassisFan.UpperThresholdFatal
+		}
+		if chassisFan.UpperThresholdNonCritical != nil && (max == nil || *min < *chassisFan.UpperThresholdNonCritical) {
+			max = chassisFan.LowerThresholdNonCritical
+		}
+
+		rpm_f := float64(*chassisFan.Reading)
+		if min != nil && max != nil {
+			min_f := float64(*min)
+			max_f := float64(*max)
+			chassisFanPercentage = new(float64)
+			*chassisFanPercentage = (rpm_f - min_f) / (max_f - min_f) * 100.0
+		}
+
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm"].desc, prometheus.GaugeValue, rpm_f, chassisFanLabelvalues...)
 	}
 
-	//			chassisFanStatusLabelNames :=[]string{BaseLabelNames,"fan_name","fan_member_id")
-	chassisFanLabelvalues := []string{"fan", chassisID, chassisFanName, chassisFanID, strings.ToLower(string(chassisFanUnit))} // e.g. RPM -> rpm, Percentage -> percentage
-
-	if chassisFanStausHealthValue, ok := parseCommonStatusHealth(chassisFanStausHealth); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_health"].desc, prometheus.GaugeValue, chassisFanStausHealthValue, chassisFanLabelvalues...)
+	if chassisFanStatusHealthValue, ok := parseCommonStatusHealth(chassisFan.Status.Health); ok {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_health"].desc, prometheus.GaugeValue, chassisFanStatusHealthValue, chassisFanLabelvalues...)
 	}
 
-	if chassisFanStausStateValue, ok := parseCommonStatusState(chassisFanStausState); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_state"].desc, prometheus.GaugeValue, chassisFanStausStateValue, chassisFanLabelvalues...)
+	if chassisFanStatusStateValue, ok := parseCommonStatusState(chassisFan.Status.State); ok {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_state"].desc, prometheus.GaugeValue, chassisFanStatusStateValue, chassisFanLabelvalues...)
 	}
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm"].desc, prometheus.GaugeValue, chassisFanRPM, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_min"].desc, prometheus.GaugeValue, chassisFanRPMMin, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_max"].desc, prometheus.GaugeValue, chassisFanRPMMax, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_percentage"].desc, prometheus.GaugeValue, chassisFanPercentage, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_critical"].desc, prometheus.GaugeValue, chassisFanRPMLowerCriticalThreshold, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_critical"].desc, prometheus.GaugeValue, chassisFanRPMUpperCriticalThreshold, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_fatal"].desc, prometheus.GaugeValue, chassisFanRPMLowerFatalThreshold, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_fatal"].desc, prometheus.GaugeValue, chassisFanRPMUpperFatalThreshold, chassisFanLabelvalues...)
+	if chassisFan.MinReadingRange != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_min"].desc, prometheus.GaugeValue, float64(*chassisFan.MinReadingRange), chassisFanLabelvalues...)
+	}
+	if chassisFan.MaxReadingRange != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_max"].desc, prometheus.GaugeValue, float64(*chassisFan.MaxReadingRange), chassisFanLabelvalues...)
+	}
+	if chassisFanPercentage != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_percentage"].desc, prometheus.GaugeValue, *chassisFanPercentage, chassisFanLabelvalues...)
+	}
+	if chassisFan.LowerThresholdCritical != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_critical"].desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdCritical), chassisFanLabelvalues...)
+	}
+	if chassisFan.LowerThresholdFatal != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_fatal"].desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdFatal), chassisFanLabelvalues...)
+	}
+	if chassisFan.LowerThresholdNonCritical != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_noncritical"].desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdNonCritical), chassisFanLabelvalues...)
+	}
+	if chassisFan.UpperThresholdCritical != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_critical"].desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdCritical), chassisFanLabelvalues...)
+	}
+	if chassisFan.UpperThresholdFatal != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_fatal"].desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdFatal), chassisFanLabelvalues...)
+	}
+	if chassisFan.UpperThresholdNonCritical != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_noncritical"].desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdNonCritical), chassisFanLabelvalues...)
+	}
 }
 
 func parseChassisPowerInfoVoltage(ch chan<- prometheus.Metric, chassisID string, chassisPowerInfoVoltage schemas.Voltage, wg *sync.WaitGroup) {
@@ -358,30 +389,34 @@ func parseChassisPowerInfoPowerControl(ch chan<- prometheus.Metric, chassisID st
 	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_average_consumed_watts"].desc, prometheus.GaugeValue, float64(*pm.AverageConsumedWatts), chassisPowerVoltageLabelvalues...)
 }
 
-func parseChassisPowerInfoPowerSupply(ch chan<- prometheus.Metric, chassisID string, chassisPowerInfoPowerSupply schemas.PowerSupply, wg *sync.WaitGroup) {
+func parseChassisPowerInfoPowerSupply(ch chan<- prometheus.Metric, chassisID string, powerSupply schemas.PowerSupply, wg *sync.WaitGroup) {
 	defer wg.Done()
-	chassisPowerInfoPowerSupplyName := chassisPowerInfoPowerSupply.Name
-	chassisPowerInfoPowerSupplyID := chassisPowerInfoPowerSupply.MemberID
-	chassisPowerInfoPowerSupplyEfficiencyPercent := chassisPowerInfoPowerSupply.EfficiencyPercent
-	chassisPowerInfoPowerSupplyPowerCapacityWatts := chassisPowerInfoPowerSupply.PowerCapacityWatts
-	chassisPowerInfoPowerSupplyPowerInputWatts := chassisPowerInfoPowerSupply.PowerInputWatts
-	chassisPowerInfoPowerSupplyPowerOutputWatts := chassisPowerInfoPowerSupply.PowerOutputWatts
-	chassisPowerInfoPowerSupplyLastPowerOutputWatts := chassisPowerInfoPowerSupply.LastPowerOutputWatts
+	powerSupplyID := powerSupply.MemberID
 
-	chassisPowerInfoPowerSupplyState := chassisPowerInfoPowerSupply.Status.State
-	chassisPowerInfoPowerSupplyHealth := chassisPowerInfoPowerSupply.Status.Health
-	chassisPowerSupplyLabelvalues := []string{"power_supply", chassisID, chassisPowerInfoPowerSupplyName, chassisPowerInfoPowerSupplyID}
+	chassisPowerInfoPowerSupplyState := powerSupply.Status.State
+	chassisPowerInfoPowerSupplyHealth := powerSupply.Status.Health
+	chassisPowerSupplyLabelvalues := []string{"power_supply", chassisID, powerSupply.Name, powerSupplyID}
 	if chassisPowerInfoPowerSupplyStateValue, ok := parseCommonStatusState(chassisPowerInfoPowerSupplyState); ok {
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_state"].desc, prometheus.GaugeValue, chassisPowerInfoPowerSupplyStateValue, chassisPowerSupplyLabelvalues...)
 	}
 	if chassisPowerInfoPowerSupplyHealthValue, ok := parseCommonStatusHealth(chassisPowerInfoPowerSupplyHealth); ok {
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_health"].desc, prometheus.GaugeValue, chassisPowerInfoPowerSupplyHealthValue, chassisPowerSupplyLabelvalues...)
 	}
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_efficiency_percentage"].desc, prometheus.GaugeValue, float64(*chassisPowerInfoPowerSupplyEfficiencyPercent), chassisPowerSupplyLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_last_power_output_watts"].desc, prometheus.GaugeValue, float64(*chassisPowerInfoPowerSupplyLastPowerOutputWatts), chassisPowerSupplyLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_capacity_watts"].desc, prometheus.GaugeValue, float64(*chassisPowerInfoPowerSupplyPowerCapacityWatts), chassisPowerSupplyLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_input_watts"].desc, prometheus.GaugeValue, float64(*chassisPowerInfoPowerSupplyPowerInputWatts), chassisPowerSupplyLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_output_watts"].desc, prometheus.GaugeValue, float64(*chassisPowerInfoPowerSupplyPowerOutputWatts), chassisPowerSupplyLabelvalues...)
+	if powerSupply.EfficiencyPercent != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_efficiency_percentage"].desc, prometheus.GaugeValue, float64(*powerSupply.EfficiencyPercent), chassisPowerSupplyLabelvalues...)
+	}
+	if powerSupply.LastPowerOutputWatts != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_last_power_output_watts"].desc, prometheus.GaugeValue, float64(*powerSupply.LastPowerOutputWatts), chassisPowerSupplyLabelvalues...)
+	}
+	if powerSupply.PowerCapacityWatts != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_capacity_watts"].desc, prometheus.GaugeValue, float64(*powerSupply.PowerCapacityWatts), chassisPowerSupplyLabelvalues...)
+	}
+	if powerSupply.PowerInputWatts != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_input_watts"].desc, prometheus.GaugeValue, float64(*powerSupply.PowerInputWatts), chassisPowerSupplyLabelvalues...)
+	}
+	if powerSupply.PowerOutputWatts != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_output_watts"].desc, prometheus.GaugeValue, float64(*powerSupply.PowerOutputWatts), chassisPowerSupplyLabelvalues...)
+	}
 }
 
 func parseNetworkAdapter(ch chan<- prometheus.Metric, chassisID string, networkAdapter *schemas.NetworkAdapter, wg *sync.WaitGroup) error {

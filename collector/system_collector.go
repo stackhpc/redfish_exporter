@@ -462,7 +462,6 @@ func parseMemory(ch chan<- prometheus.Metric, systemHostName string, memory *sch
 	memoryName := memory.Name
 	memoryID := memory.ID
 	//memoryDeviceLocator := memory.DeviceLocator
-	memoryCapacityMiB := memory.CapacityMiB
 	memoryState := memory.Status.State
 	memoryHealthState := memory.Status.Health
 
@@ -473,29 +472,34 @@ func parseMemory(ch chan<- prometheus.Metric, systemHostName string, memory *sch
 	if memoryHealthStateValue, ok := parseCommonStatusHealth(memoryHealthState); ok {
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_health_state"].desc, prometheus.GaugeValue, memoryHealthStateValue, systemMemoryLabelValues...)
 	}
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_capacity"].desc, prometheus.GaugeValue, float64(*memoryCapacityMiB), systemMemoryLabelValues...)
-
+	if memory.CapacityMiB != nil {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_capacity"].desc, prometheus.GaugeValue, float64(*memory.CapacityMiB), systemMemoryLabelValues...)
+	}
 }
 
 func parseProcessor(ch chan<- prometheus.Metric, systemHostName string, processor *schemas.Processor, wg *sync.WaitGroup) {
 	defer wg.Done()
-	processorName := processor.Name
-	processorID := processor.ID
-	processorTotalCores := processor.TotalCores
-	processorTotalThreads := processor.TotalThreads
-	processorState := processor.Status.State
-	processorHelathState := processor.Status.Health
 
-	systemProcessorLabelValues := []string{systemHostName, "processor", processorName, processorID}
+	systemProcessorLabelValues := []string{systemHostName, "processor", processor.Name, processor.ID}
 
-	if processorStateValue, ok := parseCommonStatusState(processorState); ok {
+	if processorStateValue, ok := parseCommonStatusState(processor.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_state"].desc, prometheus.GaugeValue, processorStateValue, systemProcessorLabelValues...)
 	}
-	if processorHelathStateValue, ok := parseCommonStatusHealth(processorHelathState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_health_state"].desc, prometheus.GaugeValue, processorHelathStateValue, systemProcessorLabelValues...)
+	if processorHealthStateValue, ok := parseCommonStatusHealth(processor.Status.Health); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_health_state"].desc, prometheus.GaugeValue, processorHealthStateValue, systemProcessorLabelValues...)
 	}
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_threads"].desc, prometheus.GaugeValue, float64(*processorTotalThreads), systemProcessorLabelValues...)
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_cores"].desc, prometheus.GaugeValue, float64(*processorTotalCores), systemProcessorLabelValues...)
+	if processor.TotalThreads != nil {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_threads"].desc, prometheus.GaugeValue, float64(*processor.TotalThreads), systemProcessorLabelValues...)
+	}
+	if processor.TotalEnabledThreads != nil {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_threads_enabled"].desc, prometheus.GaugeValue, float64(*processor.TotalThreads), systemProcessorLabelValues...)
+	}
+	if processor.TotalCores != nil {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_cores"].desc, prometheus.GaugeValue, float64(*processor.TotalCores), systemProcessorLabelValues...)
+	}
+	if processor.TotalEnabledCores != nil {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_cores_enabled"].desc, prometheus.GaugeValue, float64(*processor.TotalCores), systemProcessorLabelValues...)
+	}
 }
 func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *schemas.Volume, wg *sync.WaitGroup) {
 	defer wg.Done()
