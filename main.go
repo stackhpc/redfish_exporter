@@ -7,16 +7,16 @@ import (
 	"os/signal"
 	"syscall"
 
+	kingpin "github.com/alecthomas/kingpin/v2"
 	alog "github.com/apex/log"
-	kitlog "github.com/go-kit/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/log"
+	promslog "github.com/prometheus/common/promslog"
+	promslogflag "github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/exporter-toolkit/web"
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
 	"github.com/stackhpc/redfish_exporter/collector"
 	"github.com/stackhpc/redfish_exporter/common"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -31,11 +31,11 @@ var (
 		"config.file",
 		"Path to configuration file.",
 	).String()
-	webConfig     = webflag.AddFlags(kingpin.CommandLine)
-	listenAddress = kingpin.Flag(
-		"web.listen-address",
-		"Address to listen on for web interface and telemetry.",
-	).Default(":9610").String()
+	webConfig = webflag.AddFlags(kingpin.CommandLine, ":9610")
+	// listenAddress = kingpin.Flag(
+	// 	"web.listen-address",
+	// 	"Address to listen on for web interface and telemetry.",
+	// ).Default(":9610").String()
 	sc = &common.SafeConfig{
 		C: &common.Config{},
 	}
@@ -137,10 +137,12 @@ func metricsHandler() http.HandlerFunc {
 }
 
 func main() {
-	log.AddFlags(kingpin.CommandLine)
+	promslogConfig := promslog.Config{}
+	promslogflag.AddFlags(kingpin.CommandLine, &promslogConfig)
 	kingpin.HelpFlag.Short('h')
 	kingpin.Parse()
-	kitlogger := kitlog.NewLogfmtLogger(os.Stderr)
+
+	logger := promslog.New(&promslogConfig)
 	configLoggerCtx := rootLoggerCtx.WithField("config", *configFile)
 	configLoggerCtx.Info("starting app")
 	// load config  first time
@@ -202,10 +204,10 @@ func main() {
             </html>`))
 	})
 
-	rootLoggerCtx.Infof("app started. listening on %s", *listenAddress)
-	srv := &http.Server{Addr: *listenAddress}
-	err := web.ListenAndServe(srv, *webConfig, kitlogger)
+	rootLoggerCtx.Infof("app started. listening on %s", (*webConfig.WebListenAddresses)[0])
+	srv := &http.Server{Addr: (*webConfig.WebListenAddresses)[0]}
+	err := web.ListenAndServe(srv, webConfig, logger)
 	if err != nil {
-		log.Fatal(err)
+		logger.Error(err.Error())
 	}
 }
