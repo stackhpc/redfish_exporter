@@ -322,8 +322,8 @@ func parseChassisFan(ch chan<- prometheus.Metric, chassisID string, chassisFan s
 		if chassisFan.UpperThresholdFatal != nil && (max == nil || *max < *chassisFan.UpperThresholdFatal) {
 			max = chassisFan.UpperThresholdFatal
 		}
-		if chassisFan.UpperThresholdNonCritical != nil && (max == nil || *min < *chassisFan.UpperThresholdNonCritical) {
-			max = chassisFan.LowerThresholdNonCritical
+		if chassisFan.UpperThresholdNonCritical != nil && (max == nil || *max < *chassisFan.UpperThresholdNonCritical) {
+			max = chassisFan.UpperThresholdNonCritical
 		}
 
 		rpm_f := float64(*chassisFan.Reading)
@@ -360,7 +360,7 @@ func parseChassisFan(ch chan<- prometheus.Metric, chassisID string, chassisFan s
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_fatal"].desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdFatal), chassisFanLabelvalues...)
 	}
 	if chassisFan.LowerThresholdNonCritical != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_noncritical"].desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdNonCritical), chassisFanLabelvalues...)
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_non_critical"].desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdNonCritical), chassisFanLabelvalues...)
 	}
 	if chassisFan.UpperThresholdCritical != nil {
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_critical"].desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdCritical), chassisFanLabelvalues...)
@@ -369,7 +369,7 @@ func parseChassisFan(ch chan<- prometheus.Metric, chassisID string, chassisFan s
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_fatal"].desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdFatal), chassisFanLabelvalues...)
 	}
 	if chassisFan.UpperThresholdNonCritical != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_noncritical"].desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdNonCritical), chassisFanLabelvalues...)
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_non_critical"].desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdNonCritical), chassisFanLabelvalues...)
 	}
 }
 
