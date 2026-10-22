@@ -3,21 +3,18 @@ package common
 import (
 	"fmt"
 	"log/slog"
-	"net/http"
-	"strconv"
 
 	gofish "github.com/stmcginnis/gofish"
 )
 
 type CollectionContext struct {
-	Request         *http.Request
 	RedfishClient   *gofish.APIClient
 	CollectLogs     bool
 	LogCount        map[string]int
 	DisabledMetrics []string
 }
 
-func NewCollectionContext(r *http.Request, target string, hostconfig *HostConfig, logger *slog.Logger) (*CollectionContext, error) {
+func NewCollectionContext(target string, hostconfig *HostConfig, logger *slog.Logger, collectLogs bool) (*CollectionContext, error) {
 	client, err := newRedfishClient(target, hostconfig.Username, hostconfig.Password)
 	if err != nil {
 		logger.Error("error creating redfish client", "err", err)
@@ -29,17 +26,7 @@ func NewCollectionContext(r *http.Request, target string, hostconfig *HostConfig
 
 	// TODO.. query parameter could logcount_<logServiceName>=10
 
-	// Support optionally overriding collectlogs setting using a query parameter
-	collectLogs := hostconfig.Collectlogs
-	collectLogsOverride := r.URL.Query().Get("collectlogs")
-	if collectLogsOverride != "" {
-		if collectLogsQuery, err := strconv.ParseBool(collectLogsOverride); err != nil {
-			logger.Error("error parsing collectlogs query parameter as a boolean", "err", err)
-		} else {
-			collectLogs = collectLogsQuery
-		}
-	}
-	return &CollectionContext{Request: r, RedfishClient: client, CollectLogs: collectLogs, LogCount: logCount, DisabledMetrics: disabledMetrics}, nil
+	return &CollectionContext{RedfishClient: client, CollectLogs: collectLogs, LogCount: logCount, DisabledMetrics: disabledMetrics}, nil
 }
 
 func newRedfishClient(host string, username string, password string) (*gofish.APIClient, error) {
