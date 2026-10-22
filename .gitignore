@@ -26,6 +26,7 @@ config.yml
 
 # IDE files
 .vscode
+.zed
 
 # Commit all Helm chart files
 !helm/**

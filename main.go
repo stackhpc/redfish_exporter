@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"syscall"
 
 	kingpin "github.com/alecthomas/kingpin/v2"
@@ -126,7 +127,19 @@ func metricsHandler() http.HandlerFunc {
 				return
 			}
 		}
-		collectionCtx, err := common.NewCollectionContext(r, target, hostConfig, targetLoggerCtx)
+
+		// Support optionally overriding collectlogs setting using a query parameter
+		collectLogs := hostConfig.Collectlogs
+		collectLogsOverride := r.URL.Query().Get("collectlogs")
+		if collectLogsOverride != "" {
+			if collectLogsQuery, err := strconv.ParseBool(collectLogsOverride); err != nil {
+				targetLoggerCtx.Error("error parsing collectlogs query parameter as a boolean", "err", err)
+			} else {
+				collectLogs = collectLogsQuery
+			}
+		}
+
+		collectionCtx, err := common.NewCollectionContext(target, hostConfig, targetLoggerCtx, collectLogs)
 		if err != nil {
 			targetLoggerCtx.Error("error creating collection context", "err", err)
 			return
