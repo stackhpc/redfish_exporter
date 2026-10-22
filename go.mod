@@ -4,7 +4,6 @@ go 1.27
 
 require (
 	github.com/alecthomas/kingpin/v2 v2.4.0
-	github.com/google/go-cmp v0.7.0
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
 	github.com/prometheus/exporter-toolkit v0.20.0
