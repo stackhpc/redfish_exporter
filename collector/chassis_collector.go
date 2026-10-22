@@ -2,14 +2,13 @@ package collector
 
 import (
 	"fmt"
-	"math"
+	"log/slog"
 	"strings"
 	"sync"
 
-	"github.com/apex/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
-	"github.com/stmcginnis/gofish/redfish"
+	"github.com/stmcginnis/gofish/schemas"
 )
 
 // ChassisSubsystem is the chassis subsystem
@@ -36,7 +35,7 @@ type ChassisCollector struct {
 	Ctx                   *common.CollectionContext
 	metrics               map[string]Metric
 	collectorScrapeStatus *prometheus.GaugeVec
-	Log                   *log.Entry
+	Log                   *slog.Logger
 }
 
 func createChassisMetricMap() map[string]Metric {
@@ -90,15 +89,15 @@ func createChassisMetricMap() map[string]Metric {
 }
 
 // NewChassisCollector returns a collector that collecting chassis statistics
-func NewChassisCollector(ctx *common.CollectionContext, logger *log.Entry) *ChassisCollector {
+func NewChassisCollector(ctx *common.CollectionContext, logger *slog.Logger) *ChassisCollector {
 	// get service from redfish client
 
 	return &ChassisCollector{
 		metrics: chassisMetrics,
 		Ctx:     ctx,
-		Log: logger.WithFields(log.Fields{
-			"collector": "ChassisCollector",
-		}),
+		Log: logger.With(
+			"collector", "ChassisCollector",
+		),
 		collectorScrapeStatus: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
@@ -127,11 +126,11 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 
 	// get a list of chassis from service
 	if chassises, err := service.Chassis(); err != nil {
-		collectorLogContext.WithField("operation", "service.Chassis()").WithError(err).Error("error getting chassis from service")
+		collectorLogContext.Error("error getting chassis from service", "operation", "service.Chassis()", "err", err)
 	} else {
 		// process the chassises
 		for _, chassis := range chassises {
-			chassisLogContext := collectorLogContext.WithField("Chassis", chassis.ID)
+			chassisLogContext := collectorLogContext.With("Chassis", chassis.ID)
 			chassisLogContext.Info("collector scrape started")
 			chassisID := chassis.ID
 			chassisStatus := chassis.Status
@@ -154,9 +153,9 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 
 			chassisThermal, err := chassis.Thermal()
 			if err != nil {
-				chassisLogContext.WithField("operation", "chassis.Thermal()").WithError(err).Error("error getting thermal data from chassis")
+				chassisLogContext.Error("error getting thermal data from chassis", "operation", "chassis.Thermal()", "err", err)
 			} else if chassisThermal == nil {
-				chassisLogContext.WithField("operation", "chassis.Thermal()").Info("no thermal data found")
+				chassisLogContext.Info("no thermal data found", "operation", "chassis.Thermal()")
 			} else {
 				// process temperature
 				chassisTemperatures := chassisThermal.Temperatures
@@ -179,9 +178,9 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 
 			chassisPowerInfo, err := chassis.Power()
 			if err != nil {
-				chassisLogContext.WithField("operation", "chassis.Power()").WithError(err).Error("error getting power data from chassis")
+				chassisLogContext.Error("error getting power data from chassis", "operation", "chassis.Power()", "err", err)
 			} else if chassisPowerInfo == nil {
-				chassisLogContext.WithField("operation", "chassis.Power()").Info("no power data found")
+				chassisLogContext.Info("no power data found", "operation", "chassis.Power()")
 			} else {
 				// power voltages
 				chassisPowerInfoVoltages := chassisPowerInfo.Voltages
@@ -212,22 +211,22 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 
 			networkAdapters, err := chassis.NetworkAdapters()
 			if err != nil {
-				chassisLogContext.WithField("operation", "chassis.NetworkAdapters()").WithError(err).Error("error getting network adapters data from chassis")
+				chassisLogContext.Error("error getting network adapters data from chassis", "operation", "chassis.NetworkAdapters()", "err", err)
 			} else if networkAdapters == nil {
-				chassisLogContext.WithField("operation", "chassis.NetworkAdapters()").Info("no network adapters data found")
+				chassisLogContext.Info("no network adapters data found", "operation", "chassis.NetworkAdapters()")
 			} else {
 				wg5 := &sync.WaitGroup{}
 				wg5.Add(len(networkAdapters))
 
 				for _, networkAdapter := range networkAdapters {
 					if err = parseNetworkAdapter(ch, chassisID, networkAdapter, wg5); err != nil {
-						chassisLogContext.WithField("operation", "chassis.NetworkAdapters()").WithError(err).Error("error getting network ports from network adapter")
+						chassisLogContext.Error("error getting network ports from network adapter", "operation", "chassis.NetworkAdapters()", "err", err)
 					}
 				}
 			}
 
 			physicalSecurity := chassis.PhysicalSecurity
-			if physicalSecurity != (redfish.PhysicalSecurity{}) {
+			if physicalSecurity != (schemas.PhysicalSecurity{}) {
 				physicalSecurityIntrusionSensor := physicalSecurity.IntrusionSensor
 				physicalSecurityIntrusionSensorNumber := fmt.Sprint(physicalSecurity.IntrusionSensorNumber)
 				physicalSecurityIntrusionSensorReArmMethod := string(physicalSecurity.IntrusionSensorReArm)
@@ -242,16 +241,16 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 			if collectLogs {
 				logServices, err := chassis.LogServices()
 				if err != nil {
-					chassisLogContext.WithField("operation", "chassis.LogServices()").WithError(err).Error("error getting log services from chassis")
+					chassisLogContext.Error("error getting log services from chassis", "operation", "chassis.LogServices()", "err", err)
 				} else if logServices == nil {
-					chassisLogContext.WithField("operation", "chassis.LogServices()").Info("no log services found")
+					chassisLogContext.Info("no log services found", "operation", "chassis.LogServices()")
 				} else {
 					wg6 := &sync.WaitGroup{}
 					wg6.Add(len(logServices))
 
 					for _, logService := range logServices {
 						if err = parseLogService(ch, chassisMetrics, c.Ctx, chassisLogContext, ChassisSubsystem, chassisID, logService, wg6); err != nil {
-							chassisLogContext.WithField("operation", "chassis.LogServices()").WithError(err).Error("error getting log entries from log service")
+							chassisLogContext.Error("error getting log entries from log service", "operation", "chassis.LogServices()", "err", err)
 						}
 					}
 				}
@@ -263,7 +262,7 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 	c.collectorScrapeStatus.WithLabelValues("chassis").Set(float64(1))
 }
 
-func parseChassisTemperature(ch chan<- prometheus.Metric, chassisID string, chassisTemperature redfish.Temperature, wg *sync.WaitGroup) {
+func parseChassisTemperature(ch chan<- prometheus.Metric, chassisID string, chassisTemperature schemas.Temperature, wg *sync.WaitGroup) {
 	defer wg.Done()
 	chassisTemperatureSensorName := chassisTemperature.Name
 	chassisTemperatureSensorID := chassisTemperature.MemberID
@@ -282,109 +281,147 @@ func parseChassisTemperature(ch chan<- prometheus.Metric, chassisID string, chas
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_temperature_sensor_state"].desc, prometheus.GaugeValue, chassisTemperatureStatusStateValue, chassisTemperatureLabelvalues...)
 	}
 
-	chassisTemperatureReadingCelsius := chassisTemperature.ReadingCelsius
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_temperature_celsius"].desc, prometheus.GaugeValue, float64(chassisTemperatureReadingCelsius), chassisTemperatureLabelvalues...)
+	if chassisTemperature.ReadingCelsius != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_temperature_celsius"].desc, prometheus.GaugeValue, float64(*chassisTemperature.ReadingCelsius), chassisTemperatureLabelvalues...)
+	}
 }
 
-func parseChassisFan(ch chan<- prometheus.Metric, chassisID string, chassisFan redfish.ThermalFan, wg *sync.WaitGroup) {
+func parseChassisFan(ch chan<- prometheus.Metric, chassisID string, chassisFan schemas.ThermalFan, wg *sync.WaitGroup) {
 	defer wg.Done()
 	chassisFanID := chassisFan.MemberID
-	chassisFanName := chassisFan.Name
-	chassisFanStaus := chassisFan.Status
-	chassisFanStausHealth := chassisFanStaus.Health
-	chassisFanStausState := chassisFanStaus.State
-	chassisFanRPM := float64(chassisFan.Reading)
-	chassisFanUnit := chassisFan.ReadingUnits
-	chassisFanRPMLowerCriticalThreshold := float64(chassisFan.LowerThresholdCritical)
-	chassisFanRPMUpperCriticalThreshold := float64(chassisFan.UpperThresholdCritical)
-	chassisFanRPMLowerFatalThreshold := float64(chassisFan.LowerThresholdFatal)
-	chassisFanRPMUpperFatalThreshold := float64(chassisFan.UpperThresholdFatal)
-	chassisFanRPMMin := float64(chassisFan.MinReadingRange)
-	chassisFanRPMMax := float64(chassisFan.MaxReadingRange)
+	chassisFanLabelvalues := []string{"fan", chassisID, chassisFan.Name, chassisFanID, strings.ToLower(string(chassisFan.ReadingUnits))} // e.g. RPM -> rpm, Percentage -> percentage
 
-	chassisFanPercentage := chassisFanRPM
-	if chassisFanUnit != redfish.PercentReadingUnits {
-		// Some vendors (e.g. PowerEdge C6420) report null RPMs for Min/Max, as well as Lower/UpperFatal,
-		// but provide Lower/UpperCritical, so use largest non-null for max. However, we can't know if
-		// min is null (reported as zero by gofish) or just zero, so we'll have to assume a min of zero
-		// if Min is not reported...
-		min := chassisFanRPMMin
-		max := math.Max(math.Max(chassisFanRPMMax, chassisFanRPMUpperFatalThreshold), chassisFanRPMUpperCriticalThreshold)
-		chassisFanPercentage = 0
-		if max != 0 {
-			chassisFanPercentage = float64((chassisFanRPM+min)/max) * 100
+	var chassisFanPercentage *float64
+	switch chassisFan.ReadingUnits {
+	case schemas.PercentReadingUnits:
+		if chassisFan.Reading == nil {
+			break
 		}
+		chassisFanPercentage = new(float64)
+		*chassisFanPercentage = float64(*chassisFan.Reading)
+	case schemas.RPMReadingUnits: // Calculate fan percentage from best value for min/max
+		if chassisFan.Reading == nil {
+			break
+		}
+		// Some vendors (e.g. PowerEdge C6420) report null RPMs for Min/Max, as well as Lower/UpperFatal,
+		// but provide Lower/UpperCritical, so we use the most extreme value we have as the limits.
+		var min *int = chassisFan.MinReadingRange
+		var max *int = chassisFan.MaxReadingRange
+		if chassisFan.LowerThresholdCritical != nil && (min == nil || *min > *chassisFan.LowerThresholdCritical) {
+			min = chassisFan.LowerThresholdCritical
+		}
+		if chassisFan.LowerThresholdFatal != nil && (min == nil || *min > *chassisFan.LowerThresholdFatal) {
+			min = chassisFan.LowerThresholdFatal
+		}
+		if chassisFan.LowerThresholdNonCritical != nil && (min == nil || *min > *chassisFan.LowerThresholdNonCritical) {
+			min = chassisFan.LowerThresholdNonCritical
+		}
+		if chassisFan.UpperThresholdCritical != nil && (max == nil || *max < *chassisFan.UpperThresholdCritical) {
+			max = chassisFan.UpperThresholdCritical
+		}
+		if chassisFan.UpperThresholdFatal != nil && (max == nil || *max < *chassisFan.UpperThresholdFatal) {
+			max = chassisFan.UpperThresholdFatal
+		}
+		if chassisFan.UpperThresholdNonCritical != nil && (max == nil || *max < *chassisFan.UpperThresholdNonCritical) {
+			max = chassisFan.UpperThresholdNonCritical
+		}
+
+		rpm_f := float64(*chassisFan.Reading)
+		if min != nil && max != nil {
+			min_f := float64(*min)
+			max_f := float64(*max)
+			chassisFanPercentage = new(float64)
+			*chassisFanPercentage = (rpm_f - min_f) / (max_f - min_f) * 100.0
+		}
+
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm"].desc, prometheus.GaugeValue, rpm_f, chassisFanLabelvalues...)
 	}
 
-	//			chassisFanStatusLabelNames :=[]string{BaseLabelNames,"fan_name","fan_member_id")
-	chassisFanLabelvalues := []string{"fan", chassisID, chassisFanName, chassisFanID, strings.ToLower(string(chassisFanUnit))} // e.g. RPM -> rpm, Percentage -> percentage
-
-	if chassisFanStausHealthValue, ok := parseCommonStatusHealth(chassisFanStausHealth); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_health"].desc, prometheus.GaugeValue, chassisFanStausHealthValue, chassisFanLabelvalues...)
+	if chassisFanStatusHealthValue, ok := parseCommonStatusHealth(chassisFan.Status.Health); ok {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_health"].desc, prometheus.GaugeValue, chassisFanStatusHealthValue, chassisFanLabelvalues...)
 	}
 
-	if chassisFanStausStateValue, ok := parseCommonStatusState(chassisFanStausState); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_state"].desc, prometheus.GaugeValue, chassisFanStausStateValue, chassisFanLabelvalues...)
+	if chassisFanStatusStateValue, ok := parseCommonStatusState(chassisFan.Status.State); ok {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_state"].desc, prometheus.GaugeValue, chassisFanStatusStateValue, chassisFanLabelvalues...)
 	}
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm"].desc, prometheus.GaugeValue, chassisFanRPM, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_min"].desc, prometheus.GaugeValue, chassisFanRPMMin, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_max"].desc, prometheus.GaugeValue, chassisFanRPMMax, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_percentage"].desc, prometheus.GaugeValue, chassisFanPercentage, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_critical"].desc, prometheus.GaugeValue, chassisFanRPMLowerCriticalThreshold, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_critical"].desc, prometheus.GaugeValue, chassisFanRPMUpperCriticalThreshold, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_fatal"].desc, prometheus.GaugeValue, chassisFanRPMLowerFatalThreshold, chassisFanLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_fatal"].desc, prometheus.GaugeValue, chassisFanRPMUpperFatalThreshold, chassisFanLabelvalues...)
+	if chassisFan.MinReadingRange != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_min"].desc, prometheus.GaugeValue, float64(*chassisFan.MinReadingRange), chassisFanLabelvalues...)
+	}
+	if chassisFan.MaxReadingRange != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_max"].desc, prometheus.GaugeValue, float64(*chassisFan.MaxReadingRange), chassisFanLabelvalues...)
+	}
+	if chassisFanPercentage != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_percentage"].desc, prometheus.GaugeValue, *chassisFanPercentage, chassisFanLabelvalues...)
+	}
+	if chassisFan.LowerThresholdCritical != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_critical"].desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdCritical), chassisFanLabelvalues...)
+	}
+	if chassisFan.LowerThresholdFatal != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_fatal"].desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdFatal), chassisFanLabelvalues...)
+	}
+	if chassisFan.LowerThresholdNonCritical != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_non_critical"].desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdNonCritical), chassisFanLabelvalues...)
+	}
+	if chassisFan.UpperThresholdCritical != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_critical"].desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdCritical), chassisFanLabelvalues...)
+	}
+	if chassisFan.UpperThresholdFatal != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_fatal"].desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdFatal), chassisFanLabelvalues...)
+	}
+	if chassisFan.UpperThresholdNonCritical != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_non_critical"].desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdNonCritical), chassisFanLabelvalues...)
+	}
 }
 
-func parseChassisPowerInfoVoltage(ch chan<- prometheus.Metric, chassisID string, chassisPowerInfoVoltage redfish.Voltage, wg *sync.WaitGroup) {
+func parseChassisPowerInfoVoltage(ch chan<- prometheus.Metric, chassisID string, voltageInfo schemas.Voltage, wg *sync.WaitGroup) {
 	defer wg.Done()
-	chassisPowerInfoVoltageName := chassisPowerInfoVoltage.Name
-	chassisPowerInfoVoltageID := chassisPowerInfoVoltage.MemberID
-	chassisPowerInfoVoltageNameReadingVolts := chassisPowerInfoVoltage.ReadingVolts
-	chassisPowerInfoVoltageState := chassisPowerInfoVoltage.Status.State
-	chassisPowerVoltageLabelvalues := []string{"power_voltage", chassisID, chassisPowerInfoVoltageName, chassisPowerInfoVoltageID}
-	if chassisPowerInfoVoltageStateValue, ok := parseCommonStatusState(chassisPowerInfoVoltageState); ok {
+	voltageInfoID := voltageInfo.MemberID
+	chassisPowerVoltageLabelvalues := []string{"power_voltage", chassisID, voltageInfo.Name, voltageInfoID}
+	if chassisPowerInfoVoltageStateValue, ok := parseCommonStatusState(voltageInfo.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_voltage_state"].desc, prometheus.GaugeValue, chassisPowerInfoVoltageStateValue, chassisPowerVoltageLabelvalues...)
 	}
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_voltage_volts"].desc, prometheus.GaugeValue, float64(chassisPowerInfoVoltageNameReadingVolts), chassisPowerVoltageLabelvalues...)
+	if voltageInfo.ReadingVolts != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_voltage_volts"].desc, prometheus.GaugeValue, float64(*voltageInfo.ReadingVolts), chassisPowerVoltageLabelvalues...)
+	}
 }
 
-func parseChassisPowerInfoPowerControl(ch chan<- prometheus.Metric, chassisID string, chassisPowerInfoPowerControl redfish.PowerControl, wg *sync.WaitGroup) {
+func parseChassisPowerInfoPowerControl(ch chan<- prometheus.Metric, chassisID string, powerControl schemas.PowerControl, wg *sync.WaitGroup) {
 	defer wg.Done()
-	name := chassisPowerInfoPowerControl.Name
-	id := chassisPowerInfoPowerControl.MemberID
-	pm := chassisPowerInfoPowerControl.PowerMetrics
-	chassisPowerVoltageLabelvalues := []string{"power_wattage", chassisID, name, id}
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_average_consumed_watts"].desc, prometheus.GaugeValue, float64(pm.AverageConsumedWatts), chassisPowerVoltageLabelvalues...)
+	chassisPowerVoltageLabelvalues := []string{"power_wattage", chassisID, powerControl.Name, powerControl.MemberID}
+	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_average_consumed_watts"].desc, prometheus.GaugeValue, float64(*powerControl.PowerMetrics.AverageConsumedWatts), chassisPowerVoltageLabelvalues...)
 }
 
-func parseChassisPowerInfoPowerSupply(ch chan<- prometheus.Metric, chassisID string, chassisPowerInfoPowerSupply redfish.PowerSupply, wg *sync.WaitGroup) {
+func parseChassisPowerInfoPowerSupply(ch chan<- prometheus.Metric, chassisID string, powerSupply schemas.PowerSupply, wg *sync.WaitGroup) {
 	defer wg.Done()
-	chassisPowerInfoPowerSupplyName := chassisPowerInfoPowerSupply.Name
-	chassisPowerInfoPowerSupplyID := chassisPowerInfoPowerSupply.MemberID
-	chassisPowerInfoPowerSupplyEfficiencyPercent := chassisPowerInfoPowerSupply.EfficiencyPercent
-	chassisPowerInfoPowerSupplyPowerCapacityWatts := chassisPowerInfoPowerSupply.PowerCapacityWatts
-	chassisPowerInfoPowerSupplyPowerInputWatts := chassisPowerInfoPowerSupply.PowerInputWatts
-	chassisPowerInfoPowerSupplyPowerOutputWatts := chassisPowerInfoPowerSupply.PowerOutputWatts
-	chassisPowerInfoPowerSupplyLastPowerOutputWatts := chassisPowerInfoPowerSupply.LastPowerOutputWatts
+	powerSupplyID := powerSupply.MemberID
 
-	chassisPowerInfoPowerSupplyState := chassisPowerInfoPowerSupply.Status.State
-	chassisPowerInfoPowerSupplyHealth := chassisPowerInfoPowerSupply.Status.Health
-	chassisPowerSupplyLabelvalues := []string{"power_supply", chassisID, chassisPowerInfoPowerSupplyName, chassisPowerInfoPowerSupplyID}
+	chassisPowerInfoPowerSupplyState := powerSupply.Status.State
+	chassisPowerInfoPowerSupplyHealth := powerSupply.Status.Health
+	chassisPowerSupplyLabelvalues := []string{"power_supply", chassisID, powerSupply.Name, powerSupplyID}
 	if chassisPowerInfoPowerSupplyStateValue, ok := parseCommonStatusState(chassisPowerInfoPowerSupplyState); ok {
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_state"].desc, prometheus.GaugeValue, chassisPowerInfoPowerSupplyStateValue, chassisPowerSupplyLabelvalues...)
 	}
 	if chassisPowerInfoPowerSupplyHealthValue, ok := parseCommonStatusHealth(chassisPowerInfoPowerSupplyHealth); ok {
 		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_health"].desc, prometheus.GaugeValue, chassisPowerInfoPowerSupplyHealthValue, chassisPowerSupplyLabelvalues...)
 	}
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_efficiency_percentage"].desc, prometheus.GaugeValue, float64(chassisPowerInfoPowerSupplyEfficiencyPercent), chassisPowerSupplyLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_last_power_output_watts"].desc, prometheus.GaugeValue, float64(chassisPowerInfoPowerSupplyLastPowerOutputWatts), chassisPowerSupplyLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_capacity_watts"].desc, prometheus.GaugeValue, float64(chassisPowerInfoPowerSupplyPowerCapacityWatts), chassisPowerSupplyLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_input_watts"].desc, prometheus.GaugeValue, float64(chassisPowerInfoPowerSupplyPowerInputWatts), chassisPowerSupplyLabelvalues...)
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_output_watts"].desc, prometheus.GaugeValue, float64(chassisPowerInfoPowerSupplyPowerOutputWatts), chassisPowerSupplyLabelvalues...)
+	if powerSupply.EfficiencyPercent != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_efficiency_percentage"].desc, prometheus.GaugeValue, float64(*powerSupply.EfficiencyPercent), chassisPowerSupplyLabelvalues...)
+	}
+	if powerSupply.LastPowerOutputWatts != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_last_power_output_watts"].desc, prometheus.GaugeValue, float64(*powerSupply.LastPowerOutputWatts), chassisPowerSupplyLabelvalues...)
+	}
+	if powerSupply.PowerCapacityWatts != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_capacity_watts"].desc, prometheus.GaugeValue, float64(*powerSupply.PowerCapacityWatts), chassisPowerSupplyLabelvalues...)
+	}
+	if powerSupply.PowerInputWatts != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_input_watts"].desc, prometheus.GaugeValue, float64(*powerSupply.PowerInputWatts), chassisPowerSupplyLabelvalues...)
+	}
+	if powerSupply.PowerOutputWatts != nil {
+		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_output_watts"].desc, prometheus.GaugeValue, float64(*powerSupply.PowerOutputWatts), chassisPowerSupplyLabelvalues...)
+	}
 }
 
-func parseNetworkAdapter(ch chan<- prometheus.Metric, chassisID string, networkAdapter *redfish.NetworkAdapter, wg *sync.WaitGroup) error {
+func parseNetworkAdapter(ch chan<- prometheus.Metric, chassisID string, networkAdapter *schemas.NetworkAdapter, wg *sync.WaitGroup) error {
 	defer wg.Done()
 	networkAdapterName := networkAdapter.Name
 	networkAdapterID := networkAdapter.ID
@@ -411,7 +448,7 @@ func parseNetworkAdapter(ch chan<- prometheus.Metric, chassisID string, networkA
 	return nil
 }
 
-func parseNetworkPort(ch chan<- prometheus.Metric, chassisID string, networkPort *redfish.NetworkPort, networkAdapterName string, networkAdapterID string, wg *sync.WaitGroup) {
+func parseNetworkPort(ch chan<- prometheus.Metric, chassisID string, networkPort *schemas.NetworkPort, networkAdapterName string, networkAdapterID string, wg *sync.WaitGroup) {
 	defer wg.Done()
 	networkPortName := networkPort.Name
 	networkPortID := networkPort.ID

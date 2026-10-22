@@ -1,22 +1,23 @@
 package main
 
 import (
+	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
 
-	alog "github.com/apex/log"
-	kitlog "github.com/go-kit/log"
+	kingpin "github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
-	"github.com/prometheus/common/log"
+	promslog "github.com/prometheus/common/promslog"
+	promslogflag "github.com/prometheus/common/promslog/flag"
 	"github.com/prometheus/exporter-toolkit/web"
 	webflag "github.com/prometheus/exporter-toolkit/web/kingpinflag"
 	"github.com/stackhpc/redfish_exporter/collector"
 	"github.com/stackhpc/redfish_exporter/common"
-	kingpin "gopkg.in/alecthomas/kingpin.v2"
 )
 
 var (
@@ -25,17 +26,14 @@ var (
 	BuildBranch   string
 	BuildTime     string
 	BuildHost     string
-	rootLoggerCtx *alog.Entry
+	rootLoggerCtx *slog.Logger
 
 	configFile = kingpin.Flag(
 		"config.file",
 		"Path to configuration file.",
 	).String()
-	webConfig     = webflag.AddFlags(kingpin.CommandLine)
-	listenAddress = kingpin.Flag(
-		"web.listen-address",
-		"Address to listen on for web interface and telemetry.",
-	).Default(":9610").String()
+	webConfig = webflag.AddFlags(kingpin.CommandLine, ":9610")
+
 	sc = &common.SafeConfig{
 		C: &common.Config{},
 	}
@@ -43,24 +41,28 @@ var (
 )
 
 func init() {
-	rootLoggerCtx = alog.WithFields(alog.Fields{
-		"app": "redfish_exporter",
-	})
+	promslogConfig := promslog.Config{}
+	promslogflag.AddFlags(kingpin.CommandLine, &promslogConfig)
+	kingpin.HelpFlag.Short('h')
+	kingpin.Parse()
+
+	rootLoggerCtx = promslog.New(&promslogConfig).With("app", "redfish_exporter")
+	slog.SetDefault(rootLoggerCtx)
 
 	hostname, _ := os.Hostname()
-	rootLoggerCtx.Infof("version %s, build revision %s, build branch %s, built at %s on host %s", Version, BuildRevision, BuildBranch, BuildTime, hostname)
+	slog.Info(fmt.Sprintf("version %s, build revision %s, build branch %s, built at %s on host %s", Version, BuildRevision, BuildBranch, BuildTime, hostname))
 }
 
-func reloadHandler(configLoggerCtx *alog.Entry) http.HandlerFunc {
+func reloadHandler(configLoggerCtx *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		if r.Method == "POST" || r.Method == "PUT" {
 			configLoggerCtx.Info("Triggered configuration reload from /-/reload HTTP endpoint")
 			err := sc.ReloadConfig(*configFile)
 			if err != nil {
-				configLoggerCtx.WithError(err).Error("failed to reload config file")
+				configLoggerCtx.Error("failed to reload config file", "err", err)
 				http.Error(w, "failed to reload config file", http.StatusInternalServerError)
 			}
-			configLoggerCtx.WithField("operation", "sc.ReloadConfig").Info("config file reloaded")
+			configLoggerCtx.Info("config file reloaded", "operation", "sc.ReloadConfig")
 
 			w.WriteHeader(http.StatusOK)
 			_, err = io.WriteString(w, "Configuration reloaded successfully!")
@@ -74,12 +76,18 @@ func reloadHandler(configLoggerCtx *alog.Entry) http.HandlerFunc {
 }
 
 func SetLogLevel() {
-	logLevel, err := alog.ParseLevel(sc.AppLogLevel())
-	if err != nil {
-		logLevel = alog.InfoLevel
+	var level slog.Level
+	switch sc.AppLogLevel() {
+	case "debug":
+		level = slog.LevelDebug
+	case "info":
+		level = slog.LevelInfo
+	case "warn":
+		level = slog.LevelWarn
+	case "error":
+		level = slog.LevelError
 	}
-
-	alog.SetLevel(logLevel)
+	slog.SetLogLoggerLevel(level)
 }
 
 // define new http handleer
@@ -91,7 +99,7 @@ func metricsHandler() http.HandlerFunc {
 			http.Error(w, "'target' parameter must be specified", 400)
 			return
 		}
-		targetLoggerCtx := rootLoggerCtx.WithField("target", target)
+		targetLoggerCtx := rootLoggerCtx.With("target", target)
 		targetLoggerCtx.Info("scraping target host")
 
 		var (
@@ -106,7 +114,7 @@ func metricsHandler() http.HandlerFunc {
 		if ok && len(group[0]) >= 1 {
 			// Trying to get hostConfig from group.
 			if hostConfig, err = sc.HostConfigForGroup(group[0]); err != nil {
-				targetLoggerCtx.WithError(err).Error("error getting credentials")
+				targetLoggerCtx.Error("error getting credentials", "err", err)
 				return
 			}
 		}
@@ -114,13 +122,13 @@ func metricsHandler() http.HandlerFunc {
 		// Always falling back to single host config when group config failed.
 		if hostConfig == nil {
 			if hostConfig, err = sc.HostConfigForTarget(target); err != nil {
-				targetLoggerCtx.WithError(err).Error("error getting credentials")
+				targetLoggerCtx.Error("error getting credentials", "err", err)
 				return
 			}
 		}
 		collectionCtx, err := common.NewCollectionContext(r, target, hostConfig, targetLoggerCtx)
 		if err != nil {
-			targetLoggerCtx.WithError(err).Error("error creating collection context")
+			targetLoggerCtx.Error("error creating collection context", "err", err)
 			return
 		}
 		collector := collector.NewRedfishCollector(collectionCtx, targetLoggerCtx)
@@ -137,19 +145,15 @@ func metricsHandler() http.HandlerFunc {
 }
 
 func main() {
-	log.AddFlags(kingpin.CommandLine)
-	kingpin.HelpFlag.Short('h')
-	kingpin.Parse()
-	kitlogger := kitlog.NewLogfmtLogger(os.Stderr)
-	configLoggerCtx := rootLoggerCtx.WithField("config", *configFile)
+	configLoggerCtx := rootLoggerCtx.With("config", *configFile)
 	configLoggerCtx.Info("starting app")
 	// load config  first time
 	if err := sc.ReloadConfig(*configFile); err != nil {
-		configLoggerCtx.WithError(err).Error("error parsing config file")
+		configLoggerCtx.Error("error parsing config file", "err", err)
 		panic(err)
 	}
 
-	configLoggerCtx.WithField("operation", "sc.ReloadConfig").Info("config file loaded")
+	configLoggerCtx.Info("config file loaded", "operation", "sc.ReloadConfig")
 
 	SetLogLevel()
 
@@ -163,17 +167,17 @@ func main() {
 			select {
 			case <-hup:
 				if err := sc.ReloadConfig(*configFile); err != nil {
-					configLoggerCtx.WithError(err).Error("failed to reload config file")
+					configLoggerCtx.Error("failed to reload config file", "err", err)
 					break
 				}
-				configLoggerCtx.WithField("operation", "sc.ReloadConfig").Info("config file reload")
+				configLoggerCtx.Info("config file reload", "operation", "sc.ReloadConfig")
 			case rc := <-reloadCh:
 				if err := sc.ReloadConfig(*configFile); err != nil {
-					configLoggerCtx.WithError(err).Error("failed to reload config file")
+					configLoggerCtx.Error("failed to reload config file", "err", err)
 					rc <- err
 					break
 				}
-				configLoggerCtx.WithField("operation", "sc.ReloadConfig").Info("config file reloaded")
+				configLoggerCtx.Info("config file reloaded", "operation", "sc.ReloadConfig")
 				rc <- nil
 			}
 		}
@@ -202,10 +206,10 @@ func main() {
             </html>`))
 	})
 
-	rootLoggerCtx.Infof("app started. listening on %s", *listenAddress)
-	srv := &http.Server{Addr: *listenAddress}
-	err := web.ListenAndServe(srv, *webConfig, kitlogger)
+	slog.Info(fmt.Sprintf("app started. listening on %s", (*webConfig.WebListenAddresses)[0]))
+	srv := &http.Server{Addr: (*webConfig.WebListenAddresses)[0]}
+	err := web.ListenAndServe(srv, webConfig, rootLoggerCtx)
 	if err != nil {
-		log.Fatal(err)
+		slog.Error(err.Error())
 	}
 }
