@@ -2,8 +2,8 @@ package collector
 
 import (
 	"fmt"
-	"slices"
 	"log/slog"
+	"slices"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"

@@ -168,8 +168,8 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			if systemPowerStateValue, ok := parseCommonPowerState(systemPowerState); ok {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_power_state"].desc, prometheus.GaugeValue, systemPowerStateValue, systemLabelValues...)
 			}
-			if system.BIOSVersion != "" {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_bios_info"].desc, prometheus.GaugeValue, 1, append(systemLabelValues, system.BIOSVersion)...)
+			if system.BiosVersion != "" {
+				ch <- prometheus.MustNewConstMetric(s.metrics["system_bios_info"].desc, prometheus.GaugeValue, 1, append(systemLabelValues, system.BiosVersion)...)
 			}
 			if systemTotalProcessorsStateValue, ok := parseCommonStatusState(systemTotalProcessorsState); ok {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_state"].desc, prometheus.GaugeValue, systemTotalProcessorsStateValue, systemLabelValues...)
