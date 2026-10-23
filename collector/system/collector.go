@@ -1,6 +1,7 @@
-package collector
+package system
 
 import (
+	"bytes"
 	"fmt"
 	"log/slog"
 	"slices"
@@ -35,69 +36,69 @@ var (
 // SystemCollector implements the prometheus.Collector.
 type SystemCollector struct {
 	Ctx     *common.CollectionContext
-	metrics map[string]Metric
+	metrics map[string]common.Metric
 	prometheus.Collector
 	collectorScrapeStatus *prometheus.GaugeVec
 	Log                   *slog.Logger
 }
 
-func createSystemMetricMap() map[string]Metric {
-	systemMetrics := make(map[string]Metric)
+func createSystemMetricMap() map[string]common.Metric {
+	systemMetrics := make(map[string]common.Metric)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "state", fmt.Sprintf("system state,%s", CommonStateHelp), SystemLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "health_state", fmt.Sprintf("system health,%s", CommonHealthHelp), SystemLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "power_state", "system power state", SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "state", fmt.Sprintf("system state,%s", common.StateHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "health_state", fmt.Sprintf("system health,%s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "power_state", "system power state", SystemLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "total_memory_state", fmt.Sprintf("system overall memory state,%s", CommonStateHelp), SystemLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "total_memory_health_state", fmt.Sprintf("system overall memory health,%s", CommonHealthHelp), SystemLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "total_memory_size", "system total memory size, GiB", SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_memory_state", fmt.Sprintf("system overall memory state,%s", common.StateHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_memory_health_state", fmt.Sprintf("system overall memory health,%s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_memory_size", "system total memory size, GiB", SystemLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "total_processor_state", fmt.Sprintf("system overall processor state,%s", CommonStateHelp), SystemLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "total_processor_health_state", fmt.Sprintf("system overall processor health,%s", CommonHealthHelp), SystemLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "total_processor_count", "system total processor count", SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_state", fmt.Sprintf("system overall processor state,%s", common.StateHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_health_state", fmt.Sprintf("system overall processor health,%s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_count", "system total processor count", SystemLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "memory_state", fmt.Sprintf("system memory state,%s", CommonStateHelp), SystemMemoryLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "memory_health_state", fmt.Sprintf("system memory health state,%s", CommonHealthHelp), SystemMemoryLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "memory_capacity", "system memory capacity, MiB", SystemMemoryLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "memory_state", fmt.Sprintf("system memory state,%s", common.StateHelp), SystemMemoryLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "memory_health_state", fmt.Sprintf("system memory health state,%s", common.HealthHelp), SystemMemoryLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "memory_capacity", "system memory capacity, MiB", SystemMemoryLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "processor_state", fmt.Sprintf("system processor state,%s", CommonStateHelp), SystemProcessorLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "processor_health_state", fmt.Sprintf("system processor health state,%s", CommonHealthHelp), SystemProcessorLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "processor_total_threads", "system processor total threads", SystemProcessorLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "processor_total_threads_enabled", "system processor total enabled threads", SystemProcessorLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "processor_total_cores", "system processor total cores", SystemProcessorLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "processor_total_cores_enabled", "system processor total enabled cores", SystemProcessorLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_state", fmt.Sprintf("system processor state,%s", common.StateHelp), SystemProcessorLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_health_state", fmt.Sprintf("system processor health state,%s", common.HealthHelp), SystemProcessorLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_total_threads", "system processor total threads", SystemProcessorLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_total_threads_enabled", "system processor total enabled threads", SystemProcessorLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_total_cores", "system processor total cores", SystemProcessorLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_total_cores_enabled", "system processor total enabled cores", SystemProcessorLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "simple_storage_device_state", fmt.Sprintf("system simple storage device state,%s", CommonStateHelp), SystemDeviceLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "simple_storage_device_health_state", fmt.Sprintf("system simple storage device health state,%s", CommonHealthHelp), SystemDeviceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "simple_storage_device_state", fmt.Sprintf("system simple storage device state,%s", common.StateHelp), SystemDeviceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "simple_storage_device_health_state", fmt.Sprintf("system simple storage device health state,%s", common.HealthHelp), SystemDeviceLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "storage_volume_state", fmt.Sprintf("system storage volume state,%s", CommonStateHelp), SystemVolumeLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "storage_volume_health_state", fmt.Sprintf("system storage volume health state,%s", CommonHealthHelp), SystemVolumeLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "storage_volume_capacity", "system storage volume capacity, Bytes", SystemVolumeLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_volume_state", fmt.Sprintf("system storage volume state,%s", common.StateHelp), SystemVolumeLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_volume_health_state", fmt.Sprintf("system storage volume health state,%s", common.HealthHelp), SystemVolumeLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_volume_capacity", "system storage volume capacity, Bytes", SystemVolumeLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "storage_drive_state", fmt.Sprintf("system storage drive state,%s", CommonStateHelp), SystemDriveLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "storage_drive_health_state", fmt.Sprintf("system storage drive health state,%s", CommonHealthHelp), SystemDriveLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "storage_drive_capacity", "system storage drive capacity, Bytes", SystemDriveLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_drive_state", fmt.Sprintf("system storage drive state,%s", common.StateHelp), SystemDriveLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_drive_health_state", fmt.Sprintf("system storage drive health state,%s", common.HealthHelp), SystemDriveLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_drive_capacity", "system storage drive capacity, Bytes", SystemDriveLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "storage_controller_state", fmt.Sprintf("system storage controller state,%s", CommonStateHelp), SystemStorageControllerLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "storage_controller_health_state", fmt.Sprintf("system storage controller health state,%s", CommonHealthHelp), SystemStorageControllerLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_controller_state", fmt.Sprintf("system storage controller state,%s", common.StateHelp), SystemStorageControllerLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_controller_health_state", fmt.Sprintf("system storage controller health state,%s", common.HealthHelp), SystemStorageControllerLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "pcie_device_state", fmt.Sprintf("system pcie device state,%s", CommonStateHelp), SystemPCIeDeviceLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "pcie_device_health_state", fmt.Sprintf("system pcie device health state,%s", CommonHealthHelp), SystemPCIeDeviceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_device_state", fmt.Sprintf("system pcie device state,%s", common.StateHelp), SystemPCIeDeviceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_device_health_state", fmt.Sprintf("system pcie device health state,%s", common.HealthHelp), SystemPCIeDeviceLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_state", fmt.Sprintf("system pcie function state,%s", CommonStateHelp), SystemPCIeFunctionLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_health_state", fmt.Sprintf("system pcie device function state,%s", CommonHealthHelp), SystemPCIeFunctionLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_state", fmt.Sprintf("system pcie function state,%s", common.StateHelp), SystemPCIeFunctionLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_health_state", fmt.Sprintf("system pcie device function state,%s", common.HealthHelp), SystemPCIeFunctionLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "network_interface_state", fmt.Sprintf("system network interface state,%s", CommonStateHelp), SystemNetworkInterfaceLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "network_interface_health_state", fmt.Sprintf("system network interface health state,%s", CommonHealthHelp), SystemNetworkInterfaceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "network_interface_state", fmt.Sprintf("system network interface state,%s", common.StateHelp), SystemNetworkInterfaceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "network_interface_health_state", fmt.Sprintf("system network interface health state,%s", common.HealthHelp), SystemNetworkInterfaceLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_state", fmt.Sprintf("system ethernet interface state,%s", CommonStateHelp), SystemEthernetInterfaceLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_health_state", fmt.Sprintf("system ethernet interface health state,%s", CommonHealthHelp), SystemEthernetInterfaceLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_link_status", fmt.Sprintf("system ethernet interface link status,%s", CommonLinkHelp), SystemEthernetInterfaceLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_link_enabled", "system ethernet interface if the link is enabled", SystemEthernetInterfaceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_state", fmt.Sprintf("system ethernet interface state,%s", common.StateHelp), SystemEthernetInterfaceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_health_state", fmt.Sprintf("system ethernet interface health state,%s", common.HealthHelp), SystemEthernetInterfaceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_link_status", fmt.Sprintf("system ethernet interface link status,%s", common.LinkHelp), SystemEthernetInterfaceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_link_enabled", "system ethernet interface if the link is enabled", SystemEthernetInterfaceLabelNames)
 
-	addToMetricMap(systemMetrics, SystemSubsystem, "log_service_state", fmt.Sprintf("system log service state,%s", CommonStateHelp), SystemLogServiceLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "log_service_health_state", fmt.Sprintf("system log service health state,%s", CommonHealthHelp), SystemLogServiceLabelNames)
-	addToMetricMap(systemMetrics, SystemSubsystem, "log_entry_severity_state", fmt.Sprintf("system log entry severity state,%s", CommonSeverityHelp), SystemLogEntryLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_state", fmt.Sprintf("system log service state,%s", common.StateHelp), SystemLogServiceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_health_state", fmt.Sprintf("system log service health state,%s", common.HealthHelp), SystemLogServiceLabelNames)
+	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_entry_severity_state", fmt.Sprintf("system log entry severity state,%s", common.SeverityHelp), SystemLogEntryLabelNames)
 
 	return systemMetrics
 }
@@ -112,7 +113,7 @@ func NewSystemCollector(ctx *common.CollectionContext, logger *slog.Logger) *Sys
 		),
 		collectorScrapeStatus: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: common.Namespace,
 				Name:      "collector_scrape_status",
 				Help:      "collector_scrape_status",
 			},
@@ -124,7 +125,7 @@ func NewSystemCollector(ctx *common.CollectionContext, logger *slog.Logger) *Sys
 // Describe implements prometheus.Collector.
 func (s *SystemCollector) Describe(ch chan<- *prometheus.Desc) {
 	for _, metric := range s.metrics {
-		ch <- metric.desc
+		ch <- metric.Desc
 	}
 	s.collectorScrapeStatus.Describe(ch)
 }
@@ -157,32 +158,32 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			systemTotalMemoryHealthState := system.MemorySummary.Status.Health
 
 			systemLabelValues := []string{systemHostName, "system", SystemID}
-			if systemHealthStateValue, ok := parseCommonStatusHealth(systemHealthState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_health_state"].desc, prometheus.GaugeValue, systemHealthStateValue, systemLabelValues...)
+			if systemHealthStateValue, ok := common.ParseCommonStatusHealth(systemHealthState); ok {
+				ch <- prometheus.MustNewConstMetric(s.metrics["system_health_state"].Desc, prometheus.GaugeValue, systemHealthStateValue, systemLabelValues...)
 			}
-			if systemStateValue, ok := parseCommonStatusState(systemState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_state"].desc, prometheus.GaugeValue, systemStateValue, systemLabelValues...)
+			if systemStateValue, ok := common.ParseCommonStatusState(systemState); ok {
+				ch <- prometheus.MustNewConstMetric(s.metrics["system_state"].Desc, prometheus.GaugeValue, systemStateValue, systemLabelValues...)
 			}
-			if systemPowerStateValue, ok := parseCommonPowerState(systemPowerState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_power_state"].desc, prometheus.GaugeValue, systemPowerStateValue, systemLabelValues...)
+			if systemPowerStateValue, ok := common.ParseCommonPowerState(systemPowerState); ok {
+				ch <- prometheus.MustNewConstMetric(s.metrics["system_power_state"].Desc, prometheus.GaugeValue, systemPowerStateValue, systemLabelValues...)
 			}
-			if systemTotalProcessorsStateValue, ok := parseCommonStatusState(systemTotalProcessorsState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_state"].desc, prometheus.GaugeValue, systemTotalProcessorsStateValue, systemLabelValues...)
+			if systemTotalProcessorsStateValue, ok := common.ParseCommonStatusState(systemTotalProcessorsState); ok {
+				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_state"].Desc, prometheus.GaugeValue, systemTotalProcessorsStateValue, systemLabelValues...)
 				if system.ProcessorSummary.Count != nil {
-					ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_count"].desc, prometheus.GaugeValue, float64(*system.ProcessorSummary.Count), systemLabelValues...)
+					ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_count"].Desc, prometheus.GaugeValue, float64(*system.ProcessorSummary.Count), systemLabelValues...)
 				}
 			}
-			if systemTotalProcessorsHealthStateValue, ok := parseCommonStatusHealth(systemTotalProcessorsHealthState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_health_state"].desc, prometheus.GaugeValue, systemTotalProcessorsHealthStateValue, systemLabelValues...)
+			if systemTotalProcessorsHealthStateValue, ok := common.ParseCommonStatusHealth(systemTotalProcessorsHealthState); ok {
+				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_health_state"].Desc, prometheus.GaugeValue, systemTotalProcessorsHealthStateValue, systemLabelValues...)
 			}
-			if systemTotalMemoryStateValue, ok := parseCommonStatusState(systemTotalMemoryState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_state"].desc, prometheus.GaugeValue, systemTotalMemoryStateValue, systemLabelValues...)
+			if systemTotalMemoryStateValue, ok := common.ParseCommonStatusState(systemTotalMemoryState); ok {
+				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_state"].Desc, prometheus.GaugeValue, systemTotalMemoryStateValue, systemLabelValues...)
 				if system.MemorySummary.TotalSystemMemoryGiB != nil {
-					ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_size"].desc, prometheus.GaugeValue, float64(*system.MemorySummary.TotalSystemMemoryGiB), systemLabelValues...)
+					ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_size"].Desc, prometheus.GaugeValue, float64(*system.MemorySummary.TotalSystemMemoryGiB), systemLabelValues...)
 				}
 			}
-			if systemTotalMemoryHealthStateValue, ok := parseCommonStatusHealth(systemTotalMemoryHealthState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_health_state"].desc, prometheus.GaugeValue, systemTotalMemoryHealthStateValue, systemLabelValues...)
+			if systemTotalMemoryHealthStateValue, ok := common.ParseCommonStatusHealth(systemTotalMemoryHealthState); ok {
+				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_health_state"].Desc, prometheus.GaugeValue, systemTotalMemoryHealthStateValue, systemLabelValues...)
 			}
 
 			// get system OdataID
@@ -242,7 +243,7 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 					wg10.Add(len(logServices))
 
 					for _, logService := range logServices {
-						if err = parseLogService(ch, systemMetrics, s.Ctx, systemLogContext, SystemSubsystem, SystemID, logService, wg10); err != nil {
+						if err = common.ParseLogService(ch, systemMetrics, s.Ctx, systemLogContext, SystemSubsystem, SystemID, logService, wg10); err != nil {
 							systemLogContext.Error("error getting log entries from log service", "operation", "system.LogServices()", "err", err)
 						}
 					}
@@ -470,14 +471,14 @@ func parseMemory(ch chan<- prometheus.Metric, systemHostName string, memory *sch
 	memoryHealthState := memory.Status.Health
 
 	systemMemoryLabelValues := []string{systemHostName, "memory", memoryName, memoryID}
-	if memoryStateValue, ok := parseCommonStatusState(memoryState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_state"].desc, prometheus.GaugeValue, memoryStateValue, systemMemoryLabelValues...)
+	if memoryStateValue, ok := common.ParseCommonStatusState(memoryState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_state"].Desc, prometheus.GaugeValue, memoryStateValue, systemMemoryLabelValues...)
 	}
-	if memoryHealthStateValue, ok := parseCommonStatusHealth(memoryHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_health_state"].desc, prometheus.GaugeValue, memoryHealthStateValue, systemMemoryLabelValues...)
+	if memoryHealthStateValue, ok := common.ParseCommonStatusHealth(memoryHealthState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_health_state"].Desc, prometheus.GaugeValue, memoryHealthStateValue, systemMemoryLabelValues...)
 	}
 	if memory.CapacityMiB != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_capacity"].desc, prometheus.GaugeValue, float64(*memory.CapacityMiB), systemMemoryLabelValues...)
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_capacity"].Desc, prometheus.GaugeValue, float64(*memory.CapacityMiB), systemMemoryLabelValues...)
 	}
 }
 
@@ -486,23 +487,23 @@ func parseProcessor(ch chan<- prometheus.Metric, systemHostName string, processo
 
 	systemProcessorLabelValues := []string{systemHostName, "processor", processor.Name, processor.ID}
 
-	if processorStateValue, ok := parseCommonStatusState(processor.Status.State); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_state"].desc, prometheus.GaugeValue, processorStateValue, systemProcessorLabelValues...)
+	if processorStateValue, ok := common.ParseCommonStatusState(processor.Status.State); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_state"].Desc, prometheus.GaugeValue, processorStateValue, systemProcessorLabelValues...)
 	}
-	if processorHealthStateValue, ok := parseCommonStatusHealth(processor.Status.Health); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_health_state"].desc, prometheus.GaugeValue, processorHealthStateValue, systemProcessorLabelValues...)
+	if processorHealthStateValue, ok := common.ParseCommonStatusHealth(processor.Status.Health); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_health_state"].Desc, prometheus.GaugeValue, processorHealthStateValue, systemProcessorLabelValues...)
 	}
 	if processor.TotalThreads != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_threads"].desc, prometheus.GaugeValue, float64(*processor.TotalThreads), systemProcessorLabelValues...)
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_threads"].Desc, prometheus.GaugeValue, float64(*processor.TotalThreads), systemProcessorLabelValues...)
 	}
 	if processor.TotalEnabledThreads != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_threads_enabled"].desc, prometheus.GaugeValue, float64(*processor.TotalThreads), systemProcessorLabelValues...)
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_threads_enabled"].Desc, prometheus.GaugeValue, float64(*processor.TotalThreads), systemProcessorLabelValues...)
 	}
 	if processor.TotalCores != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_cores"].desc, prometheus.GaugeValue, float64(*processor.TotalCores), systemProcessorLabelValues...)
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_cores"].Desc, prometheus.GaugeValue, float64(*processor.TotalCores), systemProcessorLabelValues...)
 	}
 	if processor.TotalEnabledCores != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_cores_enabled"].desc, prometheus.GaugeValue, float64(*processor.TotalCores), systemProcessorLabelValues...)
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_cores_enabled"].Desc, prometheus.GaugeValue, float64(*processor.TotalCores), systemProcessorLabelValues...)
 	}
 }
 func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *schemas.Volume, wg *sync.WaitGroup) {
@@ -512,14 +513,14 @@ func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *sch
 	volumeState := volume.Status.State
 	volumeHealthState := volume.Status.Health
 	systemVolumeLabelValues := []string{systemHostName, "volume", volumeName, volumeID}
-	if volumeStateValue, ok := parseCommonStatusState(volumeState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_state"].desc, prometheus.GaugeValue, volumeStateValue, systemVolumeLabelValues...)
+	if volumeStateValue, ok := common.ParseCommonStatusState(volumeState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_state"].Desc, prometheus.GaugeValue, volumeStateValue, systemVolumeLabelValues...)
 	}
-	if volumeHealthStateValue, ok := parseCommonStatusHealth(volumeHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_health_state"].desc, prometheus.GaugeValue, volumeHealthStateValue, systemVolumeLabelValues...)
+	if volumeHealthStateValue, ok := common.ParseCommonStatusHealth(volumeHealthState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_health_state"].Desc, prometheus.GaugeValue, volumeHealthStateValue, systemVolumeLabelValues...)
 	}
 	if volume.CapacityBytes != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_capacity"].desc, prometheus.GaugeValue, float64(*volume.CapacityBytes), systemVolumeLabelValues...)
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_capacity"].Desc, prometheus.GaugeValue, float64(*volume.CapacityBytes), systemVolumeLabelValues...)
 	}
 }
 func parseDevice(ch chan<- prometheus.Metric, systemHostName string, device schemas.Device, wg *sync.WaitGroup) {
@@ -528,11 +529,11 @@ func parseDevice(ch chan<- prometheus.Metric, systemHostName string, device sche
 	deviceState := device.Status.State
 	deviceHealthState := device.Status.Health
 	systemDeviceLabelValues := []string{systemHostName, "device", deviceName}
-	if deviceStateValue, ok := parseCommonStatusState(deviceState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_simple_storage_device_state"].desc, prometheus.GaugeValue, deviceStateValue, systemDeviceLabelValues...)
+	if deviceStateValue, ok := common.ParseCommonStatusState(deviceState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_simple_storage_device_state"].Desc, prometheus.GaugeValue, deviceStateValue, systemDeviceLabelValues...)
 	}
-	if deviceHealthStateValue, ok := parseCommonStatusHealth(deviceHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_simple_storage_device_health_state"].desc, prometheus.GaugeValue, deviceHealthStateValue, systemDeviceLabelValues...)
+	if deviceHealthStateValue, ok := common.ParseCommonStatusHealth(deviceHealthState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_simple_storage_device_health_state"].Desc, prometheus.GaugeValue, deviceHealthStateValue, systemDeviceLabelValues...)
 	}
 }
 func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schemas.Drive, wg *sync.WaitGroup) {
@@ -542,14 +543,14 @@ func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schem
 	driveState := drive.Status.State
 	driveHealthState := drive.Status.Health
 	systemdriveLabelValues := []string{systemHostName, "drive", driveName, driveID}
-	if driveStateValue, ok := parseCommonStatusState(driveState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_state"].desc, prometheus.GaugeValue, driveStateValue, systemdriveLabelValues...)
+	if driveStateValue, ok := common.ParseCommonStatusState(driveState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_state"].Desc, prometheus.GaugeValue, driveStateValue, systemdriveLabelValues...)
 	}
-	if driveHealthStateValue, ok := parseCommonStatusHealth(driveHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_health_state"].desc, prometheus.GaugeValue, driveHealthStateValue, systemdriveLabelValues...)
+	if driveHealthStateValue, ok := common.ParseCommonStatusHealth(driveHealthState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_health_state"].Desc, prometheus.GaugeValue, driveHealthStateValue, systemdriveLabelValues...)
 	}
 	if drive.CapacityBytes != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_capacity"].desc, prometheus.GaugeValue, float64(*drive.CapacityBytes), systemdriveLabelValues...)
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_capacity"].Desc, prometheus.GaugeValue, float64(*drive.CapacityBytes), systemdriveLabelValues...)
 	}
 }
 
@@ -564,11 +565,11 @@ func parsePcieDevice(ch chan<- prometheus.Metric, systemHostName string, pcieDev
 	pcieSerialNumber := pcieDevice.SerialNumber
 	systemPCIeDeviceLabelValues := []string{systemHostName, "pcie_device", pcieDeviceName, pcieDeviceID, pcieDevicePartNumber, pcieDeviceType, pcieSerialNumber}
 
-	if pcieStateVaule, ok := parseCommonStatusState(pcieDeviceState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_device_state"].desc, prometheus.GaugeValue, pcieStateVaule, systemPCIeDeviceLabelValues...)
+	if pcieStateVaule, ok := common.ParseCommonStatusState(pcieDeviceState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_device_state"].Desc, prometheus.GaugeValue, pcieStateVaule, systemPCIeDeviceLabelValues...)
 	}
-	if pcieHealthStateVaule, ok := parseCommonStatusHealth(pcieDeviceHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_device_health_state"].desc, prometheus.GaugeValue, pcieHealthStateVaule, systemPCIeDeviceLabelValues...)
+	if pcieHealthStateVaule, ok := common.ParseCommonStatusHealth(pcieDeviceHealthState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_device_health_state"].Desc, prometheus.GaugeValue, pcieHealthStateVaule, systemPCIeDeviceLabelValues...)
 	}
 }
 
@@ -580,11 +581,11 @@ func parseNetworkInterface(ch chan<- prometheus.Metric, systemHostName string, n
 	networkInterfaceHealthState := networkInterface.Status.Health
 	systemNetworkInterfaceLabelValues := []string{systemHostName, "network_interface", networkInterfaceName, networkInterfaceID}
 
-	if networknetworkInterfaceStateVaule, ok := parseCommonStatusState(networkInterfaceState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_network_interface_state"].desc, prometheus.GaugeValue, networknetworkInterfaceStateVaule, systemNetworkInterfaceLabelValues...)
+	if networknetworkInterfaceStateVaule, ok := common.ParseCommonStatusState(networkInterfaceState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_network_interface_state"].Desc, prometheus.GaugeValue, networknetworkInterfaceStateVaule, systemNetworkInterfaceLabelValues...)
 	}
-	if networknetworkInterfaceHealthStateVaule, ok := parseCommonStatusHealth(networkInterfaceHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_network_interface_health_state"].desc, prometheus.GaugeValue, networknetworkInterfaceHealthStateVaule, systemNetworkInterfaceLabelValues...)
+	if networknetworkInterfaceHealthStateVaule, ok := common.ParseCommonStatusHealth(networkInterfaceHealthState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_network_interface_health_state"].Desc, prometheus.GaugeValue, networknetworkInterfaceHealthStateVaule, systemNetworkInterfaceLabelValues...)
 	}
 }
 
@@ -600,17 +601,37 @@ func parseEthernetInterface(ch chan<- prometheus.Metric, systemHostName string, 
 	ethernetInterfaceState := ethernetInterface.Status.State
 	ethernetInterfaceHealthState := ethernetInterface.Status.Health
 	systemEthernetInterfaceLabelValues := []string{systemHostName, "ethernet_interface", ethernetInterfaceName, ethernetInterfaceID, ethernetInterfaceSpeed}
-	if ethernetInterfaceStateValue, ok := parseCommonStatusState(ethernetInterfaceState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_state"].desc, prometheus.GaugeValue, ethernetInterfaceStateValue, systemEthernetInterfaceLabelValues...)
+	if ethernetInterfaceStateValue, ok := common.ParseCommonStatusState(ethernetInterfaceState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_state"].Desc, prometheus.GaugeValue, ethernetInterfaceStateValue, systemEthernetInterfaceLabelValues...)
 	}
-	if ethernetInterfaceHealthStateValue, ok := parseCommonStatusHealth(ethernetInterfaceHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_health_state"].desc, prometheus.GaugeValue, ethernetInterfaceHealthStateValue, systemEthernetInterfaceLabelValues...)
+	if ethernetInterfaceHealthStateValue, ok := common.ParseCommonStatusHealth(ethernetInterfaceHealthState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_health_state"].Desc, prometheus.GaugeValue, ethernetInterfaceHealthStateValue, systemEthernetInterfaceLabelValues...)
 	}
 	if ethernetInterfaceLinkStatusValue, ok := parseLinkStatus(ethernetInterfaceLinkStatus); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_link_status"].desc, prometheus.GaugeValue, ethernetInterfaceLinkStatusValue, systemEthernetInterfaceLabelValues...)
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_link_status"].Desc, prometheus.GaugeValue, ethernetInterfaceLinkStatusValue, systemEthernetInterfaceLabelValues...)
 	}
 
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_link_enabled"].desc, prometheus.GaugeValue, boolToFloat64(ethernetInterfaceEnabled), systemEthernetInterfaceLabelValues...)
+	ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_link_enabled"].Desc, prometheus.GaugeValue, boolToFloat64(ethernetInterfaceEnabled), systemEthernetInterfaceLabelValues...)
+}
+
+func parseLinkStatus(status schemas.LinkStatus) (float64, bool) {
+	if bytes.Equal([]byte(status), []byte("LinkUp")) {
+		return float64(1), true
+	} else if bytes.Equal([]byte(status), []byte("NoLink")) {
+		return float64(2), true
+	} else if bytes.Equal([]byte(status), []byte("LinkDown")) {
+		return float64(3), true
+	}
+	return float64(0), false
+}
+
+func boolToFloat64(data bool) float64 {
+
+	if data {
+		return float64(1)
+	}
+	return float64(0)
+
 }
 
 func parsePcieFunction(ch chan<- prometheus.Metric, systemHostName string, pcieFunction *schemas.PCIeFunction, wg *sync.WaitGroup) {
@@ -624,11 +645,11 @@ func parsePcieFunction(ch chan<- prometheus.Metric, systemHostName string, pcieF
 
 	systemPCIeFunctionLabelLabelValues := []string{systemHostName, "pcie_function", pcieFunctionName, pcieFunctionID, pciFunctionDeviceclass, pciFunctionType}
 
-	if pciFunctionStateValue, ok := parseCommonStatusState(pciFunctionState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_function_state"].desc, prometheus.GaugeValue, pciFunctionStateValue, systemPCIeFunctionLabelLabelValues...)
+	if pciFunctionStateValue, ok := common.ParseCommonStatusState(pciFunctionState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_function_state"].Desc, prometheus.GaugeValue, pciFunctionStateValue, systemPCIeFunctionLabelLabelValues...)
 	}
 
-	if pciFunctionHealthStateValue, ok := parseCommonStatusHealth(pciFunctionHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_function_health_state"].desc, prometheus.GaugeValue, pciFunctionHealthStateValue, systemPCIeFunctionLabelLabelValues...)
+	if pciFunctionHealthStateValue, ok := common.ParseCommonStatusHealth(pciFunctionHealthState); ok {
+		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_function_health_state"].Desc, prometheus.GaugeValue, pciFunctionHealthStateValue, systemPCIeFunctionLabelLabelValues...)
 	}
 }

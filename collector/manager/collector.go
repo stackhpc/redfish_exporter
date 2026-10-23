@@ -1,4 +1,4 @@
-package collector
+package manager
 
 import (
 	"fmt"
@@ -23,20 +23,20 @@ var (
 // ManagerCollector implements the prometheus.Collector.
 type ManagerCollector struct {
 	Ctx                   *common.CollectionContext
-	metrics               map[string]Metric
+	metrics               map[string]common.Metric
 	collectorScrapeStatus *prometheus.GaugeVec
 	Log                   *slog.Logger
 }
 
-func createManagerMetricMap() map[string]Metric {
-	managerMetrics := make(map[string]Metric)
-	addToMetricMap(managerMetrics, ManagerSubmanager, "state", fmt.Sprintf("manager state,%s", CommonStateHelp), ManagerLabelNames)
-	addToMetricMap(managerMetrics, ManagerSubmanager, "health_state", fmt.Sprintf("manager health,%s", CommonHealthHelp), ManagerLabelNames)
-	addToMetricMap(managerMetrics, ManagerSubmanager, "power_state", "manager power state", ManagerLabelNames)
+func createManagerMetricMap() map[string]common.Metric {
+	managerMetrics := make(map[string]common.Metric)
+	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "state", fmt.Sprintf("manager state,%s", common.StateHelp), ManagerLabelNames)
+	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "health_state", fmt.Sprintf("manager health,%s", common.HealthHelp), ManagerLabelNames)
+	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "power_state", "manager power state", ManagerLabelNames)
 
-	addToMetricMap(managerMetrics, ManagerSubmanager, "log_service_state", fmt.Sprintf("manager log service state,%s", CommonStateHelp), ManagerLogServiceLabelNames)
-	addToMetricMap(managerMetrics, ManagerSubmanager, "log_service_health_state", fmt.Sprintf("manager log service health state,%s", CommonHealthHelp), ManagerLogServiceLabelNames)
-	addToMetricMap(managerMetrics, ManagerSubmanager, "log_entry_severity_state", fmt.Sprintf("manager log entry severity state,%s", CommonSeverityHelp), ManagerLogEntryLabelNames)
+	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "log_service_state", fmt.Sprintf("manager log service state,%s", common.StateHelp), ManagerLogServiceLabelNames)
+	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "log_service_health_state", fmt.Sprintf("manager log service health state,%s", common.HealthHelp), ManagerLogServiceLabelNames)
+	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "log_entry_severity_state", fmt.Sprintf("manager log entry severity state,%s", common.SeverityHelp), ManagerLogEntryLabelNames)
 
 	return managerMetrics
 }
@@ -51,7 +51,7 @@ func NewManagerCollector(ctx *common.CollectionContext, logger *slog.Logger) *Ma
 		),
 		collectorScrapeStatus: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
-				Namespace: namespace,
+				Namespace: common.Namespace,
 				Name:      "collector_scrape_status",
 				Help:      "collector_scrape_status",
 			},
@@ -63,7 +63,7 @@ func NewManagerCollector(ctx *common.CollectionContext, logger *slog.Logger) *Ma
 // Describe implemented prometheus.Collector
 func (m *ManagerCollector) Describe(ch chan<- *prometheus.Desc) {
 	for _, metric := range m.metrics {
-		ch <- metric.desc
+		ch <- metric.Desc
 	}
 	m.collectorScrapeStatus.Describe(ch)
 
@@ -94,14 +94,14 @@ func (m *ManagerCollector) Collect(ch chan<- prometheus.Metric) {
 
 			ManagerLabelValues := []string{ManagerID, managerName, managerModel, managerType}
 
-			if managerHealthStateValue, ok := parseCommonStatusHealth(managerHealthState); ok {
-				ch <- prometheus.MustNewConstMetric(m.metrics["manager_health_state"].desc, prometheus.GaugeValue, managerHealthStateValue, ManagerLabelValues...)
+			if managerHealthStateValue, ok := common.ParseCommonStatusHealth(managerHealthState); ok {
+				ch <- prometheus.MustNewConstMetric(m.metrics["manager_health_state"].Desc, prometheus.GaugeValue, managerHealthStateValue, ManagerLabelValues...)
 			}
-			if managerStateValue, ok := parseCommonStatusState(managerState); ok {
-				ch <- prometheus.MustNewConstMetric(m.metrics["manager_state"].desc, prometheus.GaugeValue, managerStateValue, ManagerLabelValues...)
+			if managerStateValue, ok := common.ParseCommonStatusState(managerState); ok {
+				ch <- prometheus.MustNewConstMetric(m.metrics["manager_state"].Desc, prometheus.GaugeValue, managerStateValue, ManagerLabelValues...)
 			}
-			if managerPowerStateValue, ok := parseCommonPowerState(managerPowerState); ok {
-				ch <- prometheus.MustNewConstMetric(m.metrics["manager_power_state"].desc, prometheus.GaugeValue, managerPowerStateValue, ManagerLabelValues...)
+			if managerPowerStateValue, ok := common.ParseCommonPowerState(managerPowerState); ok {
+				ch <- prometheus.MustNewConstMetric(m.metrics["manager_power_state"].Desc, prometheus.GaugeValue, managerPowerStateValue, ManagerLabelValues...)
 			}
 
 			// process log services
@@ -116,7 +116,7 @@ func (m *ManagerCollector) Collect(ch chan<- prometheus.Metric) {
 					wg.Add(len(logServices))
 
 					for _, logService := range logServices {
-						if err = parseLogService(ch, managerMetrics, m.Ctx, managerLogContext, ManagerSubmanager, ManagerID, logService, wg); err != nil {
+						if err = common.ParseLogService(ch, managerMetrics, m.Ctx, managerLogContext, ManagerSubmanager, ManagerID, logService, wg); err != nil {
 							managerLogContext.Error("error getting log entries from log service", "operation", "manager.LogServices()", "err", err)
 						}
 					}
