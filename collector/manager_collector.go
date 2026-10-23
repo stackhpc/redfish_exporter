@@ -3,9 +3,9 @@ package collector
 import (
 	"fmt"
 	"slices"
+	"log/slog"
 	"sync"
 
-	"github.com/apex/log"
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
 )
@@ -27,7 +27,7 @@ type ManagerCollector struct {
 	Ctx                   *common.CollectionContext
 	metrics               map[string]Metric
 	collectorScrapeStatus *prometheus.GaugeVec
-	Log                   *log.Entry
+	Log                   *slog.Logger
 }
 
 func createManagerMetricMap() map[string]Metric {
@@ -45,13 +45,13 @@ func createManagerMetricMap() map[string]Metric {
 }
 
 // NewManagerCollector returns a collector that collecting memory statistics
-func NewManagerCollector(ctx *common.CollectionContext, logger *log.Entry) *ManagerCollector {
+func NewManagerCollector(ctx *common.CollectionContext, logger *slog.Logger) *ManagerCollector {
 	return &ManagerCollector{
 		metrics: managerMetrics,
 		Ctx:     ctx,
-		Log: logger.WithFields(log.Fields{
-			"collector": "ManagerCollector",
-		}),
+		Log: logger.With(
+			"collector", "ManagerCollector",
+		),
 		collectorScrapeStatus: prometheus.NewGaugeVec(
 			prometheus.GaugeOpts{
 				Namespace: namespace,
@@ -81,10 +81,10 @@ func (m *ManagerCollector) Collect(ch chan<- prometheus.Metric) {
 
 	// get a list of managers from service
 	if managers, err := service.Managers(); err != nil {
-		collectorLogContext.WithField("operation", "service.Managers()").WithError(err).Error("error getting managers from service")
+		collectorLogContext.Error("error getting managers from service", "operation", "service.Managers()", "err", err)
 	} else {
 		for _, manager := range managers {
-			managerLogContext := collectorLogContext.WithField("Manager", manager.ID)
+			managerLogContext := collectorLogContext.With("Manager", manager.ID)
 			managerLogContext.Info("collector scrape started")
 			// overall manager metrics
 			ManagerID := manager.ID
@@ -114,16 +114,16 @@ func (m *ManagerCollector) Collect(ch chan<- prometheus.Metric) {
 			if collectLogs {
 				logServices, err := manager.LogServices()
 				if err != nil {
-					managerLogContext.WithField("operation", "manager.LogServices()").WithError(err).Error("error getting log services from manager")
+					managerLogContext.Error("error getting log services from manager", "operation", "manager.LogServices()", "err", err)
 				} else if logServices == nil {
-					managerLogContext.WithField("operation", "manager.LogServices()").Info("no log services found")
+					managerLogContext.Info("no log services found", "operation", "manager.LogServices()")
 				} else {
 					wg := &sync.WaitGroup{}
 					wg.Add(len(logServices))
 
 					for _, logService := range logServices {
 						if err = parseLogService(ch, managerMetrics, m.Ctx, managerLogContext, ManagerSubmanager, ManagerID, logService, wg); err != nil {
-							managerLogContext.WithField("operation", "manager.LogServices()").WithError(err).Error("error getting log entries from log service")
+							managerLogContext.Error("error getting log entries from log service", "operation", "manager.LogServices()", "err", err)
 						}
 					}
 				}
