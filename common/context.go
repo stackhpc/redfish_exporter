@@ -7,6 +7,16 @@ import (
 	gofish "github.com/stmcginnis/gofish"
 )
 
+// Metric name parts.
+const (
+	// Exporter namespace.
+	Namespace = "redfish"
+	// Subsystem(s).
+	exporter = "exporter"
+	// Math constant for picoseconds to seconds.
+	picoSeconds = 1e12
+)
+
 type CollectionContext struct {
 	RedfishClient   *gofish.APIClient
 	CollectLogs     bool
