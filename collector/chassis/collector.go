@@ -4,12 +4,12 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
-	"strings"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stmcginnis/gofish/schemas"
 
+	"github.com/stackhpc/redfish_exporter/collector/chassis/thermal"
 	"github.com/stackhpc/redfish_exporter/common"
 )
 
@@ -18,8 +18,6 @@ var (
 	ChassisSubsystem                  = "chassis"
 	ChassisLabelNames                 = []string{"resource", "chassis_id"}
 	ChassisModel                      = []string{"resource", "chassis_id", "manufacturer", "model", "part_number", "sku"}
-	ChassisTemperatureLabelNames      = []string{"resource", "chassis_id", "sensor", "sensor_id"}
-	ChassisFanLabelNames              = []string{"resource", "chassis_id", "fan", "fan_id", "fan_unit"}
 	ChassisPowerVoltageLabelNames     = []string{"resource", "chassis_id", "power_voltage", "power_voltage_id"}
 	ChassisPowerSupplyLabelNames      = []string{"resource", "chassis_id", "power_supply", "power_supply_id"}
 	ChassisNetworkAdapterLabelNames   = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id"}
@@ -38,6 +36,7 @@ type ChassisCollector struct {
 	metrics               map[string]common.Metric
 	collectorScrapeStatus *prometheus.GaugeVec
 	Log                   *slog.Logger
+	thermal               *thermal.Collector
 }
 
 func createChassisMetricMap() map[string]common.Metric {
@@ -45,23 +44,6 @@ func createChassisMetricMap() map[string]common.Metric {
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "health", fmt.Sprintf("health of chassis,%s", common.HealthHelp), ChassisLabelNames)
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "state", fmt.Sprintf("state of chassis,%s", common.StateHelp), ChassisLabelNames)
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "model_info", "organization responsible for producing the chassis, the name by which the manufacturer generally refers to the chassis, and a part number and sku assigned by the organization that is responsible for producing or manufacturing the chassis", ChassisModel)
-
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "temperature_sensor_state", fmt.Sprintf("status state of temperature on this chassis component,%s", common.StateHelp), ChassisTemperatureLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "temperature_sensor_health", fmt.Sprintf("status health of temperature on this chassis component,%s", common.StateHelp), ChassisTemperatureLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "temperature_celsius", "celsius of temperature on this chassis component", ChassisTemperatureLabelNames)
-
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_health", fmt.Sprintf("fan health on this chassis component,%s", common.HealthHelp), ChassisFanLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_state", fmt.Sprintf("fan state on this chassis component,%s", common.StateHelp), ChassisFanLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_rpm", "fan RPM or percentage on this chassis component", ChassisFanLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_rpm_percentage", "fan RPM, as a percentage of the min-max RPMs possible, on this chassis component", ChassisFanLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_rpm_min", "lowest possible fan RPM or percentage, on this chassis component", ChassisFanLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_rpm_max", "highest possible fan RPM or percentage, on this chassis component", ChassisFanLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_rpm_lower_threshold_critical", "threshold below the normal range fan RPM or percentage, but not fatal, on this chassis component", ChassisFanLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_rpm_lower_threshold_non_critical", "threshold below the normal range fan RPM or percentage, but not critical, on this chassis component", ChassisFanLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_rpm_lower_threshold_fatal", "threshold below the normal range fan RPM or percentage, and is fatal, on this chassis component", ChassisFanLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_rpm_upper_threshold_critical", "threshold above the normal range fan RPM or percentage, but not fatal, on this chassis component", ChassisFanLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_rpm_upper_threshold_non_critical", "threshold above the normal range fan RPM or percentage, but not critical, on this chassis component", ChassisFanLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "fan_rpm_upper_threshold_fatal", "threshold above the normal range fan RPM or percentage, and is fatal, on this chassis component", ChassisFanLabelNames)
 
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_voltage_state", fmt.Sprintf("power voltage state of chassis component,%s", common.StateHelp), ChassisPowerVoltageLabelNames)
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_voltage_volts", "power voltage volts number of chassis component", ChassisPowerVoltageLabelNames)
@@ -126,6 +108,8 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 	collectLogs := c.Ctx.CollectLogs
 	service := c.Ctx.RedfishClient.Service
 
+	wg := &sync.WaitGroup{}
+
 	// get a list of chassis from service
 	if chassises, err := service.Chassis(); err != nil {
 		collectorLogContext.Error("error getting chassis from service", "operation", "service.Chassis()", "err", err)
@@ -153,30 +137,8 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 			ChassisModelLabelValues := []string{"chassis", chassisID, chassisManufacturer, chassisModel, chassisPartNumber, chassisSKU}
 			ch <- prometheus.MustNewConstMetric(c.metrics["chassis_model_info"].Desc, prometheus.GaugeValue, 1, ChassisModelLabelValues...)
 
-			chassisThermal, err := chassis.Thermal()
-			if err != nil {
-				chassisLogContext.Error("error getting thermal data from chassis", "operation", "chassis.Thermal()", "err", err)
-			} else if chassisThermal == nil {
-				chassisLogContext.Info("no thermal data found", "operation", "chassis.Thermal()")
-			} else {
-				// process temperature
-				chassisTemperatures := chassisThermal.Temperatures
-				wg := &sync.WaitGroup{}
-				wg.Add(len(chassisTemperatures))
-
-				for _, chassisTemperature := range chassisTemperatures {
-					go parseChassisTemperature(ch, chassisID, chassisTemperature, wg)
-				}
-
-				// process fans
-
-				chassisFans := chassisThermal.Fans
-				wg2 := &sync.WaitGroup{}
-				wg2.Add(len(chassisFans))
-				for _, chassisFan := range chassisFans {
-					go parseChassisFan(ch, chassisID, chassisFan, wg2)
-				}
-			}
+			thermal := thermal.NewCollector(c.Ctx, c.Log, chassis)
+			wg.Go(func() { thermal.Collect(ch) })
 
 			chassisPowerInfo, err := chassis.Power()
 			if err != nil {
@@ -261,118 +223,8 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
+	wg.Wait()
 	c.collectorScrapeStatus.WithLabelValues("chassis").Set(float64(1))
-}
-
-func parseChassisTemperature(ch chan<- prometheus.Metric, chassisID string, chassisTemperature schemas.Temperature, wg *sync.WaitGroup) {
-	defer wg.Done()
-	chassisTemperatureSensorName := chassisTemperature.Name
-	chassisTemperatureSensorID := chassisTemperature.MemberID
-	chassisTemperatureStatus := chassisTemperature.Status
-	chassisTemperatureLabelvalues := []string{"temperature", chassisID, chassisTemperatureSensorName, chassisTemperatureSensorID}
-
-	chassisTemperatureStatusHealth := chassisTemperatureStatus.Health
-	if chassisTemperatureStatusHealthValue, ok := common.ParseCommonStatusHealth(chassisTemperatureStatusHealth); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_temperature_sensor_health"].Desc, prometheus.GaugeValue, chassisTemperatureStatusHealthValue, chassisTemperatureLabelvalues...)
-	}
-
-	chassisTemperatureStatusState := chassisTemperatureStatus.State
-	//			chassisTemperatureStatusLabelNames :=[]string{BaseLabelNames,"temperature_sensor_name","temperature_sensor_member_id")
-	//		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_temperature_status_health"].Desc, prometheus.GaugeValue, parseCommonStatusHealth(chassisTemperatureStatusHealth), chassisTemperatureLabelvalues...)
-	if chassisTemperatureStatusStateValue, ok := common.ParseCommonStatusState(chassisTemperatureStatusState); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_temperature_sensor_state"].Desc, prometheus.GaugeValue, chassisTemperatureStatusStateValue, chassisTemperatureLabelvalues...)
-	}
-
-	if chassisTemperature.ReadingCelsius != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_temperature_celsius"].Desc, prometheus.GaugeValue, float64(*chassisTemperature.ReadingCelsius), chassisTemperatureLabelvalues...)
-	}
-}
-
-func parseChassisFan(ch chan<- prometheus.Metric, chassisID string, chassisFan schemas.ThermalFan, wg *sync.WaitGroup) {
-	defer wg.Done()
-	chassisFanID := chassisFan.MemberID
-	chassisFanLabelvalues := []string{"fan", chassisID, chassisFan.Name, chassisFanID, strings.ToLower(string(chassisFan.ReadingUnits))} // e.g. RPM -> rpm, Percentage -> percentage
-
-	var chassisFanPercentage *float64
-	switch chassisFan.ReadingUnits {
-	case schemas.PercentReadingUnits:
-		if chassisFan.Reading == nil {
-			break
-		}
-		chassisFanPercentage = new(float64)
-		*chassisFanPercentage = float64(*chassisFan.Reading)
-	case schemas.RPMReadingUnits: // Calculate fan percentage from best value for min/max
-		if chassisFan.Reading == nil {
-			break
-		}
-		// Some vendors (e.g. PowerEdge C6420) report null RPMs for Min/Max, as well as Lower/UpperFatal,
-		// but provide Lower/UpperCritical, so we use the most extreme value we have as the limits.
-		var min *int = chassisFan.MinReadingRange
-		var max *int = chassisFan.MaxReadingRange
-		if chassisFan.LowerThresholdCritical != nil && (min == nil || *min > *chassisFan.LowerThresholdCritical) {
-			min = chassisFan.LowerThresholdCritical
-		}
-		if chassisFan.LowerThresholdFatal != nil && (min == nil || *min > *chassisFan.LowerThresholdFatal) {
-			min = chassisFan.LowerThresholdFatal
-		}
-		if chassisFan.LowerThresholdNonCritical != nil && (min == nil || *min > *chassisFan.LowerThresholdNonCritical) {
-			min = chassisFan.LowerThresholdNonCritical
-		}
-		if chassisFan.UpperThresholdCritical != nil && (max == nil || *max < *chassisFan.UpperThresholdCritical) {
-			max = chassisFan.UpperThresholdCritical
-		}
-		if chassisFan.UpperThresholdFatal != nil && (max == nil || *max < *chassisFan.UpperThresholdFatal) {
-			max = chassisFan.UpperThresholdFatal
-		}
-		if chassisFan.UpperThresholdNonCritical != nil && (max == nil || *max < *chassisFan.UpperThresholdNonCritical) {
-			max = chassisFan.UpperThresholdNonCritical
-		}
-
-		rpm_f := float64(*chassisFan.Reading)
-		if min != nil && max != nil {
-			min_f := float64(*min)
-			max_f := float64(*max)
-			chassisFanPercentage = new(float64)
-			*chassisFanPercentage = (rpm_f - min_f) / (max_f - min_f) * 100.0
-		}
-
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm"].Desc, prometheus.GaugeValue, rpm_f, chassisFanLabelvalues...)
-	}
-
-	if chassisFanStatusHealthValue, ok := common.ParseCommonStatusHealth(chassisFan.Status.Health); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_health"].Desc, prometheus.GaugeValue, chassisFanStatusHealthValue, chassisFanLabelvalues...)
-	}
-
-	if chassisFanStatusStateValue, ok := common.ParseCommonStatusState(chassisFan.Status.State); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_state"].Desc, prometheus.GaugeValue, chassisFanStatusStateValue, chassisFanLabelvalues...)
-	}
-	if chassisFan.MinReadingRange != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_min"].Desc, prometheus.GaugeValue, float64(*chassisFan.MinReadingRange), chassisFanLabelvalues...)
-	}
-	if chassisFan.MaxReadingRange != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_max"].Desc, prometheus.GaugeValue, float64(*chassisFan.MaxReadingRange), chassisFanLabelvalues...)
-	}
-	if chassisFanPercentage != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_percentage"].Desc, prometheus.GaugeValue, *chassisFanPercentage, chassisFanLabelvalues...)
-	}
-	if chassisFan.LowerThresholdCritical != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_critical"].Desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdCritical), chassisFanLabelvalues...)
-	}
-	if chassisFan.LowerThresholdFatal != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_fatal"].Desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdFatal), chassisFanLabelvalues...)
-	}
-	if chassisFan.LowerThresholdNonCritical != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_lower_threshold_non_critical"].Desc, prometheus.GaugeValue, float64(*chassisFan.LowerThresholdNonCritical), chassisFanLabelvalues...)
-	}
-	if chassisFan.UpperThresholdCritical != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_critical"].Desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdCritical), chassisFanLabelvalues...)
-	}
-	if chassisFan.UpperThresholdFatal != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_fatal"].Desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdFatal), chassisFanLabelvalues...)
-	}
-	if chassisFan.UpperThresholdNonCritical != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_fan_rpm_upper_threshold_non_critical"].Desc, prometheus.GaugeValue, float64(*chassisFan.UpperThresholdNonCritical), chassisFanLabelvalues...)
-	}
 }
 
 func parseChassisPowerInfoVoltage(ch chan<- prometheus.Metric, chassisID string, voltageInfo schemas.Voltage, wg *sync.WaitGroup) {

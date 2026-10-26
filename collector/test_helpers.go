@@ -3,6 +3,7 @@ package collector
 import (
 	"context"
 	"fmt"
+	"os"
 	"testing"
 
 	"github.com/prometheus/common/promslog"
@@ -21,7 +22,7 @@ func CreateStaticBMC(t *testing.T, path string, collect_logs bool) *RedfishColle
 			wait.ForListeningPort("443/tcp"),
 		),
 		testcontainers.WithDockerfile(testcontainers.FromDockerfile{
-			Context:   "../test_dependencies",
+			Context:   os.Getenv("FIXTURES_DIR"),
 			KeepImage: true,
 		}),
 		testcontainers.WithCmd("sushy-static", "-p", "443", "-c", "sushy.crt", "-k", "sushy.key", "-m", fmt.Sprintf("mockups/%s", path)),
