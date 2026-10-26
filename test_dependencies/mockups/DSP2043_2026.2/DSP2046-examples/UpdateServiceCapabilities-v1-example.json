@@ -1,0 +1,15 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "@odata.type": "#UpdateServiceCapabilities.v1_1_0.UpdateServiceCapabilities",
+    "Id": "UpdateServiceCapabilities",
+    "Name": "Update Service Capabilities",
+    "AllowableTargets": [
+        "/redfish/v1/Managers/BMC",
+        "/redfish/v1/Systems/437XR1138R2"
+    ],
+    "AllowableStaging": [
+        "/redfish/v1/Managers/BMC",
+        "/redfish/v1/Systems/437XR1138R2"
+    ],
+    "@odata.id": "/redfish/v1/UpdateService/UpdateServiceCapabilities"
+}

@@ -1,0 +1,5 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "PhysicalAddress": "0x8000000",
+    "Length": 2097152
+}
