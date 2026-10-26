@@ -28,8 +28,8 @@ var (
 	chassisMetrics = createChassisMetricMap()
 )
 
-// ChassisCollector implements the prometheus.Collector.
-type ChassisCollector struct {
+// Collector implements the prometheus.Collector.
+type Collector struct {
 	Ctx                   *common.CollectionContext
 	metrics               map[string]common.Metric
 	collectorScrapeStatus *prometheus.GaugeVec
@@ -53,10 +53,10 @@ func createChassisMetricMap() map[string]common.Metric {
 }
 
 // NewChassisCollector returns a collector that collecting chassis statistics
-func NewChassisCollector(ctx *common.CollectionContext, logger *slog.Logger) *ChassisCollector {
+func NewChassisCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector {
 	// get service from redfish client
 
-	return &ChassisCollector{
+	return &Collector{
 		metrics: chassisMetrics,
 		Ctx:     ctx,
 		Log: logger.With(
@@ -74,7 +74,7 @@ func NewChassisCollector(ctx *common.CollectionContext, logger *slog.Logger) *Ch
 }
 
 // Describe implemented prometheus.Collector
-func (c *ChassisCollector) Describe(ch chan<- *prometheus.Desc) {
+func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	for _, metric := range c.metrics {
 		ch <- metric.Desc
 	}
@@ -83,85 +83,84 @@ func (c *ChassisCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 // Collect implemented prometheus.Collector
-func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
-	collectorLogContext := c.Log
-	collectLogs := c.Ctx.CollectLogs
+func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	service := c.Ctx.RedfishClient.Service
 
 	wg := &sync.WaitGroup{}
 
 	// get a list of chassis from service
-	if chassises, err := service.Chassis(); err != nil {
-		collectorLogContext.Error("error getting chassis from service", "operation", "service.Chassis()", "err", err)
-	} else {
-		// process the chassises
-		for _, chassis := range chassises {
-			chassisLogContext := collectorLogContext.With("Chassis", chassis.ID)
-			chassisLogContext.Info("collector scrape started")
-			chassisID := chassis.ID
-			chassisStatus := chassis.Status
-			chassisStatusState := chassisStatus.State
-			chassisStatusHealth := chassisStatus.Health
-			ChassisLabelValues := []string{"chassis", chassisID}
-			if chassisStatusHealthValue, ok := common.ParseCommonStatusHealth(chassisStatusHealth); ok {
-				ch <- prometheus.MustNewConstMetric(c.metrics["chassis_health"].Desc, prometheus.GaugeValue, chassisStatusHealthValue, ChassisLabelValues...)
+	chassises, err := service.Chassis()
+	if err != nil {
+		c.Log.Error("error getting chassis from service", "operation", "service.Chassis()", "err", err)
+		return
+	}
+
+	// process the chassises
+	for _, chassis := range chassises {
+		chassisLogContext := c.Log.With("Chassis", chassis.ID)
+		chassisLogContext.Info("collector scrape started")
+		ChassisLabelValues := []string{"chassis", chassis.ID}
+		if chassisStatusHealthValue, ok := common.ParseCommonStatusHealth(chassis.Status.Health); ok {
+			ch <- prometheus.MustNewConstMetric(c.metrics["chassis_health"].Desc, prometheus.GaugeValue, chassisStatusHealthValue, ChassisLabelValues...)
+		}
+		if chassisStatusStateValue, ok := common.ParseCommonStatusState(chassis.Status.State); ok {
+			ch <- prometheus.MustNewConstMetric(c.metrics["chassis_state"].Desc, prometheus.GaugeValue, chassisStatusStateValue, ChassisLabelValues...)
+		}
+
+		ChassisModelLabelValues := []string{"chassis", chassis.ID, chassis.Manufacturer, chassis.Model, chassis.PartNumber, chassis.SKU}
+		ch <- prometheus.MustNewConstMetric(c.metrics["chassis_model_info"].Desc, prometheus.GaugeValue, 1, ChassisModelLabelValues...)
+
+		physicalSecurity := chassis.PhysicalSecurity
+		if physicalSecurity != (schemas.PhysicalSecurity{}) {
+			physicalSecurityIntrusionSensor := physicalSecurity.IntrusionSensor
+			physicalSecurityIntrusionSensorNumber := fmt.Sprint(physicalSecurity.IntrusionSensorNumber)
+			physicalSecurityIntrusionSensorReArmMethod := string(physicalSecurity.IntrusionSensorReArm)
+
+			if phySecIntrusionSensor, ok := parsePhySecIntrusionSensor(physicalSecurityIntrusionSensor); ok {
+				ChassisPhysicalSecurityLabelValues := []string{"physical_security", chassis.ID, physicalSecurityIntrusionSensorNumber, physicalSecurityIntrusionSensorReArmMethod}
+				ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_physical_security_sensor_state"].Desc, prometheus.GaugeValue, phySecIntrusionSensor, ChassisPhysicalSecurityLabelValues...)
 			}
-			if chassisStatusStateValue, ok := common.ParseCommonStatusState(chassisStatusState); ok {
-				ch <- prometheus.MustNewConstMetric(c.metrics["chassis_state"].Desc, prometheus.GaugeValue, chassisStatusStateValue, ChassisLabelValues...)
-			}
+		}
 
-			chassisManufacturer := chassis.Manufacturer
-			chassisModel := chassis.Model
-			chassisPartNumber := chassis.PartNumber
-			chassisSKU := chassis.SKU
-			ChassisModelLabelValues := []string{"chassis", chassisID, chassisManufacturer, chassisModel, chassisPartNumber, chassisSKU}
-			ch <- prometheus.MustNewConstMetric(c.metrics["chassis_model_info"].Desc, prometheus.GaugeValue, 1, ChassisModelLabelValues...)
+		thermal := thermal.NewCollector(c.Ctx, c.Log, chassis)
+		wg.Go(func() { thermal.Collect(ch) })
 
-			thermal := thermal.NewCollector(c.Ctx, c.Log, chassis)
-			wg.Go(func() { thermal.Collect(ch) })
+		power := power.NewCollector(c.Ctx, c.Log, chassis)
+		wg.Go(func() { power.Collect(ch) })
 
-			power := power.NewCollector(c.Ctx, c.Log, chassis)
-			wg.Go(func() { power.Collect(ch) })
+		network_adapters := network_adapters.NewCollector(c.Ctx, c.Log, chassis)
+		wg.Go(func() { network_adapters.Collect(ch) })
 
-			network_adapters := network_adapters.NewCollector(c.Ctx, c.Log, chassis)
-			wg.Go(func() { network_adapters.Collect(ch) })
-
-			physicalSecurity := chassis.PhysicalSecurity
-			if physicalSecurity != (schemas.PhysicalSecurity{}) {
-				physicalSecurityIntrusionSensor := physicalSecurity.IntrusionSensor
-				physicalSecurityIntrusionSensorNumber := fmt.Sprint(physicalSecurity.IntrusionSensorNumber)
-				physicalSecurityIntrusionSensorReArmMethod := string(physicalSecurity.IntrusionSensorReArm)
-
-				if phySecIntrusionSensor, ok := parsePhySecIntrusionSensor(physicalSecurityIntrusionSensor); ok {
-					ChassisPhysicalSecurityLabelValues := []string{"physical_security", chassisID, physicalSecurityIntrusionSensorNumber, physicalSecurityIntrusionSensorReArmMethod}
-					ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_physical_security_sensor_state"].Desc, prometheus.GaugeValue, phySecIntrusionSensor, ChassisPhysicalSecurityLabelValues...)
-				}
-			}
-
-			// process log services
-			if collectLogs {
-				logServices, err := chassis.LogServices()
-				if err != nil {
-					chassisLogContext.Error("error getting log services from chassis", "operation", "chassis.LogServices()", "err", err)
-				} else if logServices == nil {
-					chassisLogContext.Info("no log services found", "operation", "chassis.LogServices()")
-				} else {
-					wg6 := &sync.WaitGroup{}
-					wg6.Add(len(logServices))
-
-					for _, logService := range logServices {
-						if err = common.ParseLogService(ch, chassisMetrics, c.Ctx, chassisLogContext, ChassisSubsystem, chassisID, logService, wg6); err != nil {
-							chassisLogContext.Error("error getting log entries from log service", "operation", "chassis.LogServices()", "err", err)
-						}
-					}
-				}
-			}
-			chassisLogContext.Info("collector scrape completed")
+		// process log services
+		if c.Ctx.CollectLogs {
 		}
 	}
 
 	wg.Wait()
+	c.Log.Info("collector scrape completed")
 	c.collectorScrapeStatus.WithLabelValues("chassis").Set(float64(1))
+}
+
+func collectLogs(ch chan<- prometheus.Metric, chassis schemas.Chassis, logContext *slog.Logger, ctx *common.CollectionContext) {
+	logServices, err := chassis.LogServices()
+	if err != nil {
+		logContext.Error("error getting log services from chassis", "operation", "chassis.LogServices()", "err", err)
+		return
+	} else if logServices == nil {
+		logContext.Info("no log services found", "operation", "chassis.LogServices()")
+		return
+	}
+
+	wg := &sync.WaitGroup{}
+	for _, logService := range logServices {
+		wg.Go(func() {
+			if err = common.ParseLogService(ch, chassisMetrics, ctx, logContext, ChassisSubsystem, chassis.ID, logService); err != nil {
+				logContext.Error("error getting log entries from log service", "operation", "chassis.LogServices()", "err", err)
+			}
+		})
+	}
+
+	wg.Wait()
 }
 
 func parsePhySecIntrusionSensor(method schemas.IntrusionSensor) (float64, bool) {

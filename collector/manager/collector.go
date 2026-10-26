@@ -122,7 +122,7 @@ func (m *ManagerCollector) Collect(ch chan<- prometheus.Metric) {
 					wg.Add(len(logServices))
 
 					for _, logService := range logServices {
-						if err = common.ParseLogService(ch, managerMetrics, m.Ctx, managerLogContext, ManagerSubmanager, ManagerID, logService, wg); err != nil {
+						if err = common.ParseLogService(ch, managerMetrics, m.Ctx, managerLogContext, ManagerSubmanager, ManagerID, logService); err != nil {
 							managerLogContext.Error("error getting log entries from log service", "operation", "manager.LogServices()", "err", err)
 						}
 					}
