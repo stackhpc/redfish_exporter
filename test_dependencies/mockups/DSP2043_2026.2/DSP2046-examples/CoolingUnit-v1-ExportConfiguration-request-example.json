@@ -1,0 +1,9 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "ExportType": "Replacement",
+    "Components": [
+        "All"
+    ],
+    "EncryptionPassphrase": "FluffyBunny23",
+    "Security": "IncludeSensitiveData"
+}

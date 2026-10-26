@@ -1,0 +1,8 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "TelemetryDataType": "OEM",
+    "OEMTelemetryDataType": "ContosoAggregator2_0",
+    "TargetDevices": [
+        "/redfish/v1/Systems/Sys-1/Processors/P1"
+    ]
+}

@@ -1,0 +1,39 @@
+{
+    "@odata.type": "#NetworkDeviceFunction.v1_11_1.NetworkDeviceFunction",
+    "AssignablePhysicalNetworkPorts": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/1U/NetworkAdapters/Slot1/Ports/SC2KP1"
+        }
+    ],
+    "BootMode": "PXE",
+    "DeviceEnabled": true,
+    "Ethernet": {
+        "MACAddress": "aa:bb:cc:dd:ee:f5",
+        "MTUSize": 1522,
+        "PermanentMACAddress": "a1:b1:c1:d1:e1:f1",
+        "MTUSizeMaximum": 8192,
+        "AdditionalProtocols": [
+            "RoCEv2"
+        ]
+    },
+    "Id": "SC2KP1F0",
+    "Links": {
+        "PhysicalNetworkPortAssignment": {
+            "@odata.id": "/redfish/v1/Chassis/1U/NetworkAdapters/Slot1/Ports/SC2KP1"
+        },
+        "EthernetInterfaces": [
+            {
+                "@odata.id": "/redfish/v1/Systems/437XR1138R2/EthernetInterfaces/SC2KP1F0"
+            }
+        ]
+    },
+    "MaxVirtualFunctions": 16,
+    "Name": "NetworkDeviceFunction",
+    "NetDevFuncCapabilities": [
+        "Ethernet"
+    ],
+    "NetDevFuncType": "Ethernet",
+    "VirtualFunctionsEnabled": false,
+    "@odata.id": "/redfish/v1/Chassis/1U/NetworkAdapters/Slot1/NetworkDeviceFunctions/SC2KP1F0",
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright."
+}

@@ -1,0 +1,8 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "Endpoint": {
+        "@odata.id": "/redfish/v1/Fabrics/SAS/Endpoints/Initiator1"
+    },
+    "EndpointETag": "W/\"19472363938\"",
+    "ZoneETag": "W/\"99374369273\""
+}

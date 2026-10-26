@@ -1,0 +1,23 @@
+{
+    "@odata.type": "#LeakDetector.v1_6_1.LeakDetector",
+    "Id": "Moisture",
+    "Name": "Moisture Leak Detector",
+    "LeakDetectorType": "Moisture",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "DetectorState": "OK",
+    "CriticalReactionType": "ForceOff",
+    "WarningReactionType": "None",
+    "ReactionDelaySeconds": 15,
+    "Location": {
+        "PartLocation": {
+            "Reference": "Bottom",
+            "ServiceLabel": "Chassis Moisture Detector"
+        }
+    },
+    "PhysicalContext": "Chassis",
+    "@odata.id": "/redfish/v1/Chassis/CDU/LeakDetectors/Moisture",
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright."
+}

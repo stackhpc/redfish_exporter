@@ -1,0 +1,7 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "Personality": 1,
+    "Method": "HostProgrammedKey",
+    "Key": "7CE4F37A3446D21AC6B89396BF9A82B86246AEB7C71E51C35D5B20D74A9226B2",
+    "Nonce": "11AA55FF"
+}

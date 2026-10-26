@@ -1,0 +1,6 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "Image": "https://192.168.1.225/boot_image.iso",
+    "Inserted": true,
+    "WriteProtected": true
+}

@@ -1,0 +1,7 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "VolumeName": "Mirror of Volume 65",
+    "ReplicaUpdateMode": "Synchronous",
+    "TargetStoragePool": "/redfish/v1/Storage/1/StoragePools/PrimaryPool",
+    "ReplicaType": "Mirror"
+}

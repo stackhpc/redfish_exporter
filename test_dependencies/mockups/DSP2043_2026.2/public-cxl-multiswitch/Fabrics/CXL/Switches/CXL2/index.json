@@ -1,0 +1,66 @@
+{
+    "@odata.type": "#Switch.v1_11_0.Switch",
+    "Id": "CXL2",
+    "Name": "CXL Switch",
+    "SwitchType": "CXL",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK",
+        "HealthRollup": "OK"
+    },
+    "UUID": "1ad59fe9-49f9-52fa-9a93-e349f9477fe0",
+    "Ports": {
+        "@odata.id": "/redfish/v1/Fabrics/CXL/Switches/CXL2/Ports"
+    },
+    "CXL": {
+        "MaxVCSsSupported": 4,
+        "TotalNumbervPPBs": 12,
+        "MaxSupportedPIDs": 5,
+        "VirtualCXLSwitches": {
+            "@odata.id": "/redfish/v1/Fabrics/CXL/Switches/CXL2/VCSs"
+        },
+        "PIDTargetList": [
+            {
+                "TargetID": 0,
+                "TargetType": "FabricPort",
+                "InstanceID": 0,
+                "PortID": 16,
+                "PID": 11
+            },
+            {
+                "TargetID": 0,
+                "TargetType": "FabricPort",
+                "InstanceID": 1,
+                "PortID": 16,
+                "PID": 12
+            },
+            {
+                "TargetID": 1,
+                "TargetType": "HostEdgePort",
+                "InstanceID": 0,
+                "VcsID": 1,
+                "PortID": 0,
+                "PID": 14
+            },
+            {
+                "TargetID": 2,
+                "TargetType": "DownstreamEdgePort",
+                "InstanceID": 0,
+                "PortID": 8,
+                "PID": 16
+            }
+        ]
+    },
+    "Links": {
+        "Endpoints": [
+            {
+                "@odata.id": "/redfish/v1/Fabrics/CXL/Endpoints/I5"
+            },
+            {
+                "@odata.id": "/redfish/v1/Fabrics/CXL/Endpoints/T5"
+            }
+        ]
+    },
+    "@odata.id": "/redfish/v1/Fabrics/CXL/Switches/CXL2",
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright."
+}

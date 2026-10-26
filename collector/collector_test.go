@@ -6,7 +6,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 )
 
-var mocksForAllTests = []string{"DSP2043-server", "proposed-ocp-profile", "public-bladed", "public-rackmount"}
+var mocksForAllTests = []string{"DSP2043_1.0.0/DSP2043-server", "DSP2043_2026.2/public-rackmount1"}
 
 func TestScrape(t *testing.T) {
 	for _, path := range mocksForAllTests {

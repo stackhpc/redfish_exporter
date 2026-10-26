@@ -1,0 +1,39 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "@odata.type": "#LeakDetection.v1_2_0.LeakDetection",
+    "Id": "LeakDetection",
+    "Name": "Leak Detection Systems",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK",
+        "Conditions": []
+    },
+    "LeakDetectorGroups": [
+        {
+            "GroupName": "Detectors under and around the CDU",
+            "Status": {
+                "Health": "OK"
+            },
+            "HumidityPercent": {
+                "Reading": 45
+            },
+            "Detectors": [
+                {
+                    "DataSourceUri": "/redfish/v1/Chassis/CDU/LeakDetectors/Moisture",
+                    "DeviceName": "Moisture-type Leak Detector",
+                    "DetectorState": "OK"
+                },
+                {
+                    "DeviceName": "Leak Detection Rope 1",
+                    "DetectorState": "OK"
+                },
+                {
+                    "DataSourceUri": "/redfish/v1/Chassis/CDU/LeakDetectors/Overflow",
+                    "DeviceName": "Overflow Float Switch",
+                    "DetectorState": "OK"
+                }
+            ]
+        }
+    ],
+    "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/LeakDetection"
+}
