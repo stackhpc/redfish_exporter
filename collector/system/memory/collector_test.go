@@ -11,11 +11,7 @@ import (
 )
 
 func TestPublicTower_2026_2(t *testing.T) {
-<<<<<<< HEAD
 	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-tower")
-=======
-	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-tower", false)
->>>>>>> 7285272 (Split system/memory into new collector)
 
 	systems, err := redfishClient.Service.Systems()
 	require.NoError(t, err)
