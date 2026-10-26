@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stmcginnis/gofish/schemas"
 
+	"github.com/stackhpc/redfish_exporter/collector/chassis/power"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/thermal"
 	"github.com/stackhpc/redfish_exporter/common"
 )
@@ -18,8 +19,6 @@ var (
 	ChassisSubsystem                  = "chassis"
 	ChassisLabelNames                 = []string{"resource", "chassis_id"}
 	ChassisModel                      = []string{"resource", "chassis_id", "manufacturer", "model", "part_number", "sku"}
-	ChassisPowerVoltageLabelNames     = []string{"resource", "chassis_id", "power_voltage", "power_voltage_id"}
-	ChassisPowerSupplyLabelNames      = []string{"resource", "chassis_id", "power_supply", "power_supply_id"}
 	ChassisNetworkAdapterLabelNames   = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id"}
 	ChassisNetworkPortLabelNames      = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id", "network_port", "network_port_id", "network_port_type", "network_port_speed", "network_port_connectiont_type", "network_physical_port_number"}
 	ChassisPhysicalSecurityLabelNames = []string{"resource", "chassis_id", "intrusion_sensor_number", "intrusion_sensor_rearm"}
@@ -44,18 +43,6 @@ func createChassisMetricMap() map[string]common.Metric {
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "health", fmt.Sprintf("health of chassis,%s", common.HealthHelp), ChassisLabelNames)
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "state", fmt.Sprintf("state of chassis,%s", common.StateHelp), ChassisLabelNames)
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "model_info", "organization responsible for producing the chassis, the name by which the manufacturer generally refers to the chassis, and a part number and sku assigned by the organization that is responsible for producing or manufacturing the chassis", ChassisModel)
-
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_voltage_state", fmt.Sprintf("power voltage state of chassis component,%s", common.StateHelp), ChassisPowerVoltageLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_voltage_volts", "power voltage volts number of chassis component", ChassisPowerVoltageLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_average_consumed_watts", "power wattage watts number of chassis component", ChassisPowerVoltageLabelNames)
-
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_powersupply_state", fmt.Sprintf("powersupply state of chassis component,%s", common.StateHelp), ChassisPowerSupplyLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_powersupply_health", fmt.Sprintf("powersupply health of chassis component,%s", common.HealthHelp), ChassisPowerSupplyLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_powersupply_power_efficiency_percentage", "rated efficiency, as a percentage, of the associated power supply on this chassis", ChassisPowerSupplyLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_powersupply_last_power_output_watts", "average power output, measured in Watts, of the associated power supply on this chassis", ChassisPowerSupplyLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_powersupply_power_input_watts", "measured input power, in Watts, of powersupply on this chassis", ChassisPowerSupplyLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_powersupply_power_output_watts", "measured output power, in Watts, of powersupply on this chassis", ChassisPowerSupplyLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "power_powersupply_power_capacity_watts", "power_capacity_watts of powersupply on this chassis", ChassisPowerSupplyLabelNames)
 
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "network_adapter_state", fmt.Sprintf("chassis network adapter state,%s", common.StateHelp), ChassisNetworkAdapterLabelNames)
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "network_adapter_health_state", fmt.Sprintf("chassis network adapter health state,%s", common.HealthHelp), ChassisNetworkAdapterLabelNames)
@@ -140,36 +127,8 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 			thermal := thermal.NewCollector(c.Ctx, c.Log, chassis)
 			wg.Go(func() { thermal.Collect(ch) })
 
-			chassisPowerInfo, err := chassis.Power()
-			if err != nil {
-				chassisLogContext.Error("error getting power data from chassis", "operation", "chassis.Power()", "err", err)
-			} else if chassisPowerInfo == nil {
-				chassisLogContext.Info("no power data found", "operation", "chassis.Power()")
-			} else {
-				// power voltages
-				chassisPowerInfoVoltages := chassisPowerInfo.Voltages
-				wg3 := &sync.WaitGroup{}
-				wg3.Add(len(chassisPowerInfoVoltages))
-				for _, chassisPowerInfoVoltage := range chassisPowerInfoVoltages {
-					go parseChassisPowerInfoVoltage(ch, chassisID, chassisPowerInfoVoltage, wg3)
-				}
-
-				// power control
-				chassisPowerInfoPowerControls := chassisPowerInfo.PowerControl
-				wg4 := &sync.WaitGroup{}
-				wg4.Add(len(chassisPowerInfoPowerControls))
-				for _, chassisPowerInfoPowerControl := range chassisPowerInfoPowerControls {
-					go parseChassisPowerInfoPowerControl(ch, chassisID, chassisPowerInfoPowerControl, wg4)
-				}
-
-				// powerSupply
-				chassisPowerInfoPowerSupplies := chassisPowerInfo.PowerSupplies
-				wg5 := &sync.WaitGroup{}
-				wg5.Add(len(chassisPowerInfoPowerSupplies))
-				for _, chassisPowerInfoPowerSupply := range chassisPowerInfoPowerSupplies {
-					go parseChassisPowerInfoPowerSupply(ch, chassisID, chassisPowerInfoPowerSupply, wg5)
-				}
-			}
+			power := power.NewCollector(c.Ctx, c.Log, chassis)
+			wg.Go(func() { power.Collect(ch) })
 
 			// process NetapAdapter
 
@@ -227,53 +186,6 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 	c.collectorScrapeStatus.WithLabelValues("chassis").Set(float64(1))
 }
 
-func parseChassisPowerInfoVoltage(ch chan<- prometheus.Metric, chassisID string, voltageInfo schemas.Voltage, wg *sync.WaitGroup) {
-	defer wg.Done()
-	voltageInfoID := voltageInfo.MemberID
-	chassisPowerVoltageLabelvalues := []string{"power_voltage", chassisID, voltageInfo.Name, voltageInfoID}
-	if chassisPowerInfoVoltageStateValue, ok := common.ParseCommonStatusState(voltageInfo.Status.State); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_voltage_state"].Desc, prometheus.GaugeValue, chassisPowerInfoVoltageStateValue, chassisPowerVoltageLabelvalues...)
-	}
-	if voltageInfo.ReadingVolts != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_voltage_volts"].Desc, prometheus.GaugeValue, float64(*voltageInfo.ReadingVolts), chassisPowerVoltageLabelvalues...)
-	}
-}
-
-func parseChassisPowerInfoPowerControl(ch chan<- prometheus.Metric, chassisID string, powerControl schemas.PowerControl, wg *sync.WaitGroup) {
-	defer wg.Done()
-	chassisPowerVoltageLabelvalues := []string{"power_wattage", chassisID, powerControl.Name, powerControl.MemberID}
-	ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_average_consumed_watts"].Desc, prometheus.GaugeValue, float64(*powerControl.PowerMetrics.AverageConsumedWatts), chassisPowerVoltageLabelvalues...)
-}
-
-func parseChassisPowerInfoPowerSupply(ch chan<- prometheus.Metric, chassisID string, powerSupply schemas.PowerSupply, wg *sync.WaitGroup) {
-	defer wg.Done()
-	powerSupplyID := powerSupply.MemberID
-
-	chassisPowerInfoPowerSupplyState := powerSupply.Status.State
-	chassisPowerInfoPowerSupplyHealth := powerSupply.Status.Health
-	chassisPowerSupplyLabelvalues := []string{"power_supply", chassisID, powerSupply.Name, powerSupplyID}
-	if chassisPowerInfoPowerSupplyStateValue, ok := common.ParseCommonStatusState(chassisPowerInfoPowerSupplyState); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_state"].Desc, prometheus.GaugeValue, chassisPowerInfoPowerSupplyStateValue, chassisPowerSupplyLabelvalues...)
-	}
-	if chassisPowerInfoPowerSupplyHealthValue, ok := common.ParseCommonStatusHealth(chassisPowerInfoPowerSupplyHealth); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_health"].Desc, prometheus.GaugeValue, chassisPowerInfoPowerSupplyHealthValue, chassisPowerSupplyLabelvalues...)
-	}
-	if powerSupply.EfficiencyPercent != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_efficiency_percentage"].Desc, prometheus.GaugeValue, float64(*powerSupply.EfficiencyPercent), chassisPowerSupplyLabelvalues...)
-	}
-	if powerSupply.LastPowerOutputWatts != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_last_power_output_watts"].Desc, prometheus.GaugeValue, float64(*powerSupply.LastPowerOutputWatts), chassisPowerSupplyLabelvalues...)
-	}
-	if powerSupply.PowerCapacityWatts != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_capacity_watts"].Desc, prometheus.GaugeValue, float64(*powerSupply.PowerCapacityWatts), chassisPowerSupplyLabelvalues...)
-	}
-	if powerSupply.PowerInputWatts != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_input_watts"].Desc, prometheus.GaugeValue, float64(*powerSupply.PowerInputWatts), chassisPowerSupplyLabelvalues...)
-	}
-	if powerSupply.PowerOutputWatts != nil {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_power_powersupply_power_output_watts"].Desc, prometheus.GaugeValue, float64(*powerSupply.PowerOutputWatts), chassisPowerSupplyLabelvalues...)
-	}
-}
 
 func parseNetworkAdapter(ch chan<- prometheus.Metric, chassisID string, networkAdapter *schemas.NetworkAdapter, wg *sync.WaitGroup) error {
 	defer wg.Done()

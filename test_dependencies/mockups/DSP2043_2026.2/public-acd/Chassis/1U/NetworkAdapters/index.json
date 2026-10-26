@@ -1,0 +1,21 @@
+{
+    "@odata.type": "#NetworkAdapterCollection.NetworkAdapterCollection",
+    "Name": "Network Adapter Collection",
+    "Members@odata.count": 3,
+    "Members": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/1U/NetworkAdapters/Slot1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/1U/NetworkAdapters/Slot2"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/1U/NetworkAdapters/Slot3"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/1U/NetworkAdapters/Slot4"
+        }
+    ],
+    "@odata.id": "/redfish/v1/Chassis/1U/NetworkAdapters",
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright."
+}

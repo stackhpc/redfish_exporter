@@ -1,0 +1,125 @@
+{
+    "@odata.type": "#CoolingUnit.v1_6_0.CoolingUnit",
+    "Id": "1",
+    "EquipmentType": "CDU",
+    "Name": "Rack #4 Cooling Distribution Unit",
+    "FirmwareVersion": "3.2.0",
+    "Version": "1.03b",
+    "ProductionDate": "2020-12-24T08:00:00Z",
+    "Manufacturer": "Contoso",
+    "Model": "BRRR4000",
+    "SerialNumber": "29347ZT536",
+    "PartNumber": "ICE-9",
+    "AssetTag": "PDX5-92381",
+    "Status": {
+        "State": "Enabled",
+        "Health": "Warning",
+        "HealthRollup": "Critical",
+        "Conditions": [
+            {
+                "MessageId": "Environmental.1.2.PumpSubsystemHealth",
+                "Timestamp": "2025-02-12T12:25:00Z",
+                "Message": "The pump subsystem health is Critical.",
+                "Severity": "Critical",
+                "ConditionType": "Subsystem",
+                "MessageArgs": [
+                    "Critical"
+                ],
+                "OriginOfCondition": {
+                    "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/Pumps"
+                }
+            },
+            {
+                "MessageId": "Environmental.1.2.PumpFailed",
+                "Timestamp": "2025-02-12T12:25:00Z",
+                "Message": "Pump '2' has failed.",
+                "Severity": "Critical",
+                "ConditionType": "Alert",
+                "MessageArgs": [
+                    "2"
+                ],
+                "OriginOfCondition": {
+                    "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/Pumps/2"
+                }
+            },
+            {
+                "MessageId": "Environmental.1.2.PrimaryCoolantConnectorSubsystemHealth",
+                "Timestamp": "2025-02-12T12:25:00Z",
+                "Message": "The primary coolant connector subsystem health is OK.",
+                "Severity": "OK",
+                "ConditionType": "Subsystem",
+                "MessageArgs": [
+                    "OK"
+                ],
+                "OriginOfCondition": {
+                    "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/PrimaryCoolantConnectors"
+                }
+            },
+            {
+                "MessageId": "Environmental.1.2.SecondaryCoolantConnectorSubsystemHealth",
+                "Timestamp": "2025-02-12T12:25:00Z",
+                "Message": "The secondary coolant connector subsystem health is OK.",
+                "Severity": "OK",
+                "ConditionType": "Subsystem",
+                "MessageArgs": [
+                    "OK"
+                ],
+                "OriginOfCondition": {
+                    "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/SecondaryCoolantConnectors"
+                }
+            },
+            {
+                "MessageId": "Environmental.1.2.FilterSubsystemHealth",
+                "Timestamp": "2025-02-12T12:25:00Z",
+                "Message": "The filter subsystem health is OK.",
+                "Severity": "OK",
+                "ConditionType": "Subsystem",
+                "MessageArgs": [
+                    "OK"
+                ],
+                "OriginOfCondition": {
+                    "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/Filters"
+                }
+            }
+        ]
+    },
+    "Coolant": {
+        "CoolantType": "Water",
+        "AdditiveName": "Glycol",
+        "AdditivePercent": 20,
+        "SpecificHeatkJoulesPerKgK": 3.974,
+        "DensityKgPerCubicMeter": 1030
+    },
+    "Location": {
+        "Placement": {
+            "Row": "North 1"
+        }
+    },
+    "PrimaryCoolantConnectors": {
+        "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/PrimaryCoolantConnectors"
+    },
+    "SecondaryCoolantConnectors": {
+        "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/SecondaryCoolantConnectors"
+    },
+    "Pumps": {
+        "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/Pumps"
+    },
+    "Filters": {
+        "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/Filters"
+    },
+    "EnvironmentMetrics": {
+        "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/EnvironmentMetrics"
+    },
+    "LeakDetection": {
+        "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1/LeakDetection"
+    },
+    "Links": {
+        "Chassis": [
+            {
+                "@odata.id": "/redfish/v1/Chassis/CDU"
+            }
+        ]
+    },
+    "@odata.id": "/redfish/v1/ThermalEquipment/CDUs/1",
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright."
+}

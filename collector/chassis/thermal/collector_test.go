@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func TestDSP2043(t *testing.T) {
-	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043-server", false)
+func TestDSP2043_1_0_0(t *testing.T) {
+	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_1.0.0/DSP2043-server", false)
 
 	chassis, err := redfishClient.Service.Chassis()
 	require.NoError(t, err)

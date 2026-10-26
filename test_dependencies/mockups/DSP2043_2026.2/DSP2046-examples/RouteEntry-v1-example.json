@@ -1,0 +1,13 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "@odata.type": "#RouteEntry.v1_1_0.RouteEntry",
+    "Id": "0",
+    "Name": "LPRT0",
+    "Description": "Gen-Z Port 1 LPRT Entry 0",
+    "RawEntryHex": "0x34EF124500000000",
+    "RouteSet": {
+        "@odata.id": "/redfish/v1/Fabrics/GenZ/Switches/Switch1/Ports/1/LPRT/0/RouteSet"
+    },
+    "MinimumHopCount": 1,
+    "@odata.id": "/redfish/v1/Fabrics/GenZ/Switches/Switch1/Ports/1/LPRT/0"
+}

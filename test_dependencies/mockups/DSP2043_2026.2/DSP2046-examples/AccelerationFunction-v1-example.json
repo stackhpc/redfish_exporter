@@ -1,0 +1,22 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "@odata.type": "#AccelerationFunction.v1_0_5.AccelerationFunction",
+    "Id": "Compression",
+    "Name": "Compression Accelerator",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "FpgaReconfigurationSlots": [
+        "AFU0"
+    ],
+    "AccelerationFunctionType": "Compression",
+    "Manufacturer": "Intel (R) Corporation",
+    "Version": "Green Compression Type 1 v.1.00.86",
+    "PowerWatts": 15,
+    "Links": {
+        "Endpoints": [],
+        "PCIeFunctions": []
+    },
+    "@odata.id": "/redfish/v1/Systems/1/Processors/FPGA1/AccelerationFunctions/Compression"
+}

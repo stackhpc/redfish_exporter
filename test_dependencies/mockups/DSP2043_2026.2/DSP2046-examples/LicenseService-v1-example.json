@@ -1,0 +1,17 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "@odata.type": "#LicenseService.v1_1_2.LicenseService",
+    "Name": "License Service",
+    "ServiceEnabled": true,
+    "LicenseExpirationWarningDays": 14,
+    "Actions": {
+        "#LicenseService.Install": {
+            "target": "/redfish/v1/LicenseService/Actions/LicenseService.Install",
+            "@Redfish.ActionInfo": "/redfish/v1/LicenseService/InstallActionInfo"
+        }
+    },
+    "Licenses": {
+        "@odata.id": "/redfish/v1/LicenseService/Licenses"
+    },
+    "@odata.id": "/redfish/v1/LicenseService"
+}

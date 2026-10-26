@@ -1,0 +1,42 @@
+{
+    "@odata.type": "#Storage.v1_23_0.Storage",
+    "Id": "NVMeSWRAID",
+    "Name": "SW RAID for Integrated NVMe Boot Drives",
+    "Description": "Contoso SW RAID",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK",
+        "HealthRollup": "OK"
+    },
+    "StorageControllers": [
+        {
+            "@odata.id": "/redfish/v1/Systems/437XR1238R2/Storage/NVMeSWRAID#/StorageControllers/0",
+            "MemberId": "0",
+            "Name": "Contoso SW RAID",
+            "Status": {
+                "State": "Enabled",
+                "Health": "OK"
+            },
+            "SupportedDeviceProtocols": [
+                "NVMe"
+            ],
+            "SupportedRAIDTypes": [
+                "RAID0",
+                "RAID1"
+            ]
+        }
+    ],
+    "Drives": [
+        {
+            "@odata.id": "/redfish/v1/Chassis/Tower/Drives/M.2-1"
+        },
+        {
+            "@odata.id": "/redfish/v1/Chassis/Tower/Drives/M.2-2"
+        }
+    ],
+    "Volumes": {
+        "@odata.id": "/redfish/v1/Systems/437XR1238R2/Storage/NVMeSWRAID/Volumes"
+    },
+    "@odata.id": "/redfish/v1/Systems/437XR1238R2/Storage/NVMeSWRAID",
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright."
+}

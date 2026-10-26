@@ -1,0 +1,24 @@
+{
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
+    "@odata.type": "#ActionInfo.v1_6_0.ActionInfo",
+    "Id": "ResetActionInfo",
+    "Name": "Reset Action Info",
+    "Parameters": [
+        {
+            "Name": "ResetType",
+            "Required": true,
+            "DataType": "String",
+            "AllowableValues": [
+                "On",
+                "ForceOff",
+                "GracefulShutdown",
+                "GracefulRestart",
+                "ForceRestart",
+                "Nmi",
+                "ForceOn",
+                "PushPowerButton"
+            ]
+        }
+    ],
+    "@odata.id": "/redfish/v1/Systems/1/ResetActionInfo"
+}

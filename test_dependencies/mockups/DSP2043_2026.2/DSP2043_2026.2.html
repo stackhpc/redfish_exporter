@@ -1,0 +1,1330 @@
+<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml" lang xml:lang>
+<head>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <meta name="dcterms.date" content="2026-08-07" />
+  <title>Redfish Mockups Bundle Readme</title>
+  <style type="text/css">a {
+color: #4183c4;
+text-decoration: none;
+}
+a:hover {
+text-decoration: underline;
+}
+.wip {
+font-weight: normal;
+margin-bottom: 0em;
+padding: 0.5em;
+position: relative;
+text-align: left;
+border: 2px ridge #eee;
+}
+.preamble {
+font-weight: bold;
+text-align: right;
+}
+.title {
+margin-top: 3em;
+}
+#toc-header {
+text-align: center;
+break-before: page;
+page-break-before: always;
+}
+.toc {
+padding-left: 0;
+margin-left: 0em; }
+.toc ul {
+list-style-type: none;
+margin-left: 0em; padding-left: 0em ;
+text-indent: -1em;
+}
+.toc ul ul {
+list-style-type: none;
+margin-left: 1.5em; padding-left: 0em ;
+list-style-position: outside;
+text-indent: -1em;
+}
+nav {
+margin-left: 0;
+padding-left: 0;
+}
+.page-break {
+page-break-before: always;
+}
+body {
+border-collapse: collapse;
+color: #333;
+font-size: 13px;
+font-family: Arial;
+line-height: 1.4;
+word-wrap: break-word;
+}
+h1, h2, h3, h4, h5, h6 {
+font-weight: bold;
+margin-bottom: 16px;
+margin-top: 1em;
+}
+h1 {
+font-size: 2.25em;
+line-height: 1.2;
+prince-bookmark-level: 1;
+}
+h2 {
+font-size: 1.75em;
+line-height: 1.225;
+prince-bookmark-level: 1;
+}
+h1, h2 {
+border-bottom: 1px solid #eee;
+padding-bottom: 0.3em;
+}
+h3 {
+font-size: 1.5em;
+prince-bookmark-level: 2;
+}
+h4 {
+font-size: 1.25em;
+prince-bookmark-level: 3;
+}
+h5 {
+font-size: 1em;
+prince-bookmark-level: 4;
+}
+h6 {
+color: #777;
+font-size: 1em;
+prince-bookmark-level: 5;
+}
+
+@media screen {
+tr:nth-child(2n) {
+background-color: #f8f8f8;
+}
+}
+@media print {
+body {
+font-size: 10pt;
+}
+.toc a:after {
+content: leader(dotted) target-counter(attr(href), page);
+}
+.toc {
+margin-left: 0;
+padding-left: 0;
+text-decoration: none;
+}
+h1:not(.title) {
+break-before: page;
+page-break-before: always;
+}
+tbody tr {
+background-color: inherit;
+}
+}
+@page {
+size: US-Letter;
+font-family: Arial;
+font-size: 10pt;
+border-bottom: thin #444 solid;
+color: #333;
+padding-top: 0.25in;
+padding-bottom: 0.25in;
+margin: 1in;
+}
+@page:first {
+border-bottom: none;
+@top-left {
+content: '';
+}
+@top-right {
+content: '';
+}
+@bottom-left {
+content: '';
+}
+@bottom-center {
+content: '';
+}
+@bottom-right {
+content: '';
+}
+}
+pre {
+background-color: #f7f7f7;
+border-radius: 3px;
+font-size: 85%;
+line-height: 1.45;
+overflow: auto;
+padding: 16px;
+white-space: pre-wrap;
+}
+h1 {
+border: none;
+margin-bottom: 2em;
+}
+.document {
+font-weight: bold;
+}
+.copyright {
+border: 1px solid #333;
+padding: 0.5em;
+page-break-before: always;
+margin-top: 0;
+margin-bottom: 0;
+font-weight: normal;
+position: relative;
+text-align: left;
+}
+</style>
+  <style type="text/css">@font-face {
+font-family: octicons-link;
+src: url(data:font/woff;charset=utf-8;base64,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) format('woff');
+}
+.markdown-body .octicon {
+display: inline-block;
+fill: currentColor;
+vertical-align: text-bottom;
+}
+.markdown-body .anchor {
+float: left;
+line-height: 1;
+margin-left: -20px;
+padding-right: 4px;
+}
+.markdown-body .anchor:focus {
+outline: none;
+}
+.markdown-body h1 .octicon-link,
+.markdown-body h2 .octicon-link,
+.markdown-body h3 .octicon-link,
+.markdown-body h4 .octicon-link,
+.markdown-body h5 .octicon-link,
+.markdown-body h6 .octicon-link {
+color: #1b1f23;
+vertical-align: middle;
+visibility: hidden;
+}
+.markdown-body h1:hover .anchor,
+.markdown-body h2:hover .anchor,
+.markdown-body h3:hover .anchor,
+.markdown-body h4:hover .anchor,
+.markdown-body h5:hover .anchor,
+.markdown-body h6:hover .anchor {
+text-decoration: none;
+}
+.markdown-body h1:hover .anchor .octicon-link,
+.markdown-body h2:hover .anchor .octicon-link,
+.markdown-body h3:hover .anchor .octicon-link,
+.markdown-body h4:hover .anchor .octicon-link,
+.markdown-body h5:hover .anchor .octicon-link,
+.markdown-body h6:hover .anchor .octicon-link {
+visibility: visible;
+}
+.markdown-body {
+-ms-text-size-adjust: 100%;
+-webkit-text-size-adjust: 100%;
+color: #24292e;
+line-height: 1.5;
+font-family: -apple-system,BlinkMacSystemFont,Segoe UI,Helvetica,Arial,sans-serif,Apple Color Emoji,Segoe UI Emoji,Segoe UI Symbol;
+font-size: 16px;
+line-height: 1.5;
+word-wrap: break-word;
+}
+.markdown-body .pl-c {
+color: #6a737d;
+}
+.markdown-body .pl-c1,
+.markdown-body .pl-s .pl-v {
+color: #005cc5;
+}
+.markdown-body .pl-e,
+.markdown-body .pl-en {
+color: #6f42c1;
+}
+.markdown-body .pl-s .pl-s1,
+.markdown-body .pl-smi {
+color: #24292e;
+}
+.markdown-body .pl-ent {
+color: #22863a;
+}
+.markdown-body .pl-k {
+color: #d73a49;
+}
+.markdown-body .pl-pds,
+.markdown-body .pl-s,
+.markdown-body .pl-s .pl-pse .pl-s1,
+.markdown-body .pl-sr,
+.markdown-body .pl-sr .pl-cce,
+.markdown-body .pl-sr .pl-sra,
+.markdown-body .pl-sr .pl-sre {
+color: #032f62;
+}
+.markdown-body .pl-smw,
+.markdown-body .pl-v {
+color: #e36209;
+}
+.markdown-body .pl-bu {
+color: #b31d28;
+}
+.markdown-body .pl-ii {
+background-color: #b31d28;
+color: #fafbfc;
+}
+.markdown-body .pl-c2 {
+background-color: #d73a49;
+color: #fafbfc;
+}
+.markdown-body .pl-c2:before {
+content: "^M";
+}
+.markdown-body .pl-sr .pl-cce {
+color: #22863a;
+font-weight: 700;
+}
+.markdown-body .pl-ml {
+color: #735c0f;
+}
+.markdown-body .pl-mh,
+.markdown-body .pl-mh .pl-en,
+.markdown-body .pl-ms {
+color: #005cc5;
+font-weight: 700;
+}
+.markdown-body .pl-mi {
+color: #24292e;
+font-style: italic;
+}
+.markdown-body .pl-mb {
+color: #24292e;
+font-weight: 700;
+}
+.markdown-body .pl-md {
+background-color: #ffeef0;
+color: #b31d28;
+}
+.markdown-body .pl-mi1 {
+background-color: #f0fff4;
+color: #22863a;
+}
+.markdown-body .pl-mc {
+background-color: #ffebda;
+color: #e36209;
+}
+.markdown-body .pl-mi2 {
+background-color: #005cc5;
+color: #f6f8fa;
+}
+.markdown-body .pl-mdr {
+color: #6f42c1;
+font-weight: 700;
+}
+.markdown-body .pl-ba {
+color: #586069;
+}
+.markdown-body .pl-sg {
+color: #959da5;
+}
+.markdown-body .pl-corl {
+color: #032f62;
+text-decoration: underline;
+}
+.markdown-body details {
+display: block;
+}
+.markdown-body summary {
+display: list-item;
+}
+.markdown-body a {
+background-color: transparent;
+}
+.markdown-body a:active,
+.markdown-body a:hover {
+outline-width: 0;
+}
+.markdown-body strong {
+font-weight: inherit;
+font-weight: bolder;
+}
+.markdown-body h1 {
+font-size: 2em;
+margin: .67em 0;
+}
+.markdown-body img {
+border-style: none;
+}
+.markdown-body code,
+.markdown-body kbd,
+.markdown-body pre {
+font-family: monospace,monospace;
+font-size: 1em;
+}
+.markdown-body hr {
+box-sizing: content-box;
+height: 0;
+overflow: visible;
+}
+.markdown-body input {
+font: inherit;
+margin: 0;
+}
+.markdown-body input {
+overflow: visible;
+}
+.markdown-body [type=checkbox] {
+box-sizing: border-box;
+padding: 0;
+}
+.markdown-body * {
+box-sizing: border-box;
+}
+.markdown-body input {
+font-family: inherit;
+font-size: inherit;
+line-height: inherit;
+}
+.markdown-body a {
+color: #0366d6;
+text-decoration: none;
+}
+.markdown-body a:hover {
+text-decoration: underline;
+}
+.markdown-body strong {
+font-weight: 600;
+}
+.markdown-body hr {
+background: transparent;
+border: 0;
+border-bottom: 1px solid #dfe2e5;
+height: 0;
+margin: 15px 0;
+overflow: hidden;
+}
+.markdown-body hr:before {
+content: "";
+display: table;
+}
+.markdown-body hr:after {
+clear: both;
+content: "";
+display: table;
+}
+.markdown-body table {
+border-collapse: collapse;
+border-spacing: 0;
+}
+.markdown-body td,
+.markdown-body th {
+padding: 0;
+}
+.markdown-body details summary {
+cursor: pointer;
+}
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+margin-bottom: 0;
+margin-top: 0;
+}
+.markdown-body h1 {
+font-size: 32px;
+}
+.markdown-body h1,
+.markdown-body h2 {
+font-weight: 600;
+}
+.markdown-body h2 {
+font-size: 24px;
+}
+.markdown-body h3 {
+font-size: 20px;
+}
+.markdown-body h3,
+.markdown-body h4 {
+font-weight: 600;
+}
+.markdown-body h4 {
+font-size: 16px;
+}
+.markdown-body h5 {
+font-size: 14px;
+}
+.markdown-body h5,
+.markdown-body h6 {
+font-weight: 600;
+}
+.markdown-body h6 {
+font-size: 12px;
+}
+.markdown-body p {
+margin-bottom: 10px;
+margin-top: 0;
+}
+.markdown-body blockquote {
+margin: 0;
+}
+.markdown-body ol,
+.markdown-body ul {
+margin-bottom: 0;
+margin-top: 0;
+padding-left: 0;
+}
+.markdown-body ol ol,
+.markdown-body ul ol {
+list-style-type: lower-roman;
+}
+.markdown-body ol ol ol,
+.markdown-body ol ul ol,
+.markdown-body ul ol ol,
+.markdown-body ul ul ol {
+list-style-type: lower-alpha;
+}
+.markdown-body dd {
+margin-left: 0;
+}
+.markdown-body code,
+.markdown-body pre {
+font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+font-size: 12px;
+}
+.markdown-body pre {
+margin-bottom: 0;
+margin-top: 0;
+}
+.markdown-body input::-webkit-inner-spin-button,
+.markdown-body input::-webkit-outer-spin-button {
+-webkit-appearance: none;
+appearance: none;
+margin: 0;
+}
+.markdown-body .border {
+border: 1px solid #e1e4e8!important;
+}
+.markdown-body .border-0 {
+border: 0!important;
+}
+.markdown-body .border-bottom {
+border-bottom: 1px solid #e1e4e8!important;
+}
+.markdown-body .rounded-1 {
+border-radius: 3px!important;
+}
+.markdown-body .bg-white {
+background-color: #fff!important;
+}
+.markdown-body .bg-gray-light {
+background-color: #fafbfc!important;
+}
+.markdown-body .text-gray-light {
+color: #6a737d!important;
+}
+.markdown-body .mb-0 {
+margin-bottom: 0!important;
+}
+.markdown-body .my-2 {
+margin-bottom: 8px!important;
+margin-top: 8px!important;
+}
+.markdown-body .pl-0 {
+padding-left: 0!important;
+}
+.markdown-body .py-0 {
+padding-bottom: 0!important;
+padding-top: 0!important;
+}
+.markdown-body .pl-1 {
+padding-left: 4px!important;
+}
+.markdown-body .pl-2 {
+padding-left: 8px!important;
+}
+.markdown-body .py-2 {
+padding-bottom: 8px!important;
+padding-top: 8px!important;
+}
+.markdown-body .pl-3,
+.markdown-body .px-3 {
+padding-left: 16px!important;
+}
+.markdown-body .px-3 {
+padding-right: 16px!important;
+}
+.markdown-body .pl-4 {
+padding-left: 24px!important;
+}
+.markdown-body .pl-5 {
+padding-left: 32px!important;
+}
+.markdown-body .pl-6 {
+padding-left: 40px!important;
+}
+.markdown-body .f6 {
+font-size: 12px!important;
+}
+.markdown-body .lh-condensed {
+line-height: 1.25!important;
+}
+.markdown-body .text-bold {
+font-weight: 600!important;
+}
+.markdown-body:before {
+content: "";
+display: table;
+}
+.markdown-body:after {
+clear: both;
+content: "";
+display: table;
+}
+.markdown-body>:first-child {
+margin-top: 0!important;
+}
+.markdown-body>:last-child {
+margin-bottom: 0!important;
+}
+.markdown-body a:not([href]) {
+color: inherit;
+text-decoration: none;
+}
+.markdown-body blockquote,
+.markdown-body dl,
+.markdown-body ol,
+.markdown-body p,
+.markdown-body pre,
+.markdown-body table,
+.markdown-body ul {
+margin-bottom: 16px;
+margin-top: 0;
+}
+.markdown-body hr {
+background-color: #e1e4e8;
+border: 0;
+height: .25em;
+margin: 24px 0;
+padding: 0;
+}
+.markdown-body blockquote {
+border-left: .25em solid #dfe2e5;
+color: #6a737d;
+padding: 0 1em;
+}
+.markdown-body blockquote>:first-child {
+margin-top: 0;
+}
+.markdown-body blockquote>:last-child {
+margin-bottom: 0;
+}
+.markdown-body kbd {
+background-color: #fafbfc;
+border: 1px solid #c6cbd1;
+border-bottom-color: #959da5;
+border-radius: 3px;
+box-shadow: inset 0 -1px 0 #959da5;
+color: #444d56;
+display: inline-block;
+font-size: 11px;
+line-height: 10px;
+padding: 3px 5px;
+vertical-align: middle;
+}
+.markdown-body h1,
+.markdown-body h2,
+.markdown-body h3,
+.markdown-body h4,
+.markdown-body h5,
+.markdown-body h6 {
+font-weight: 600;
+line-height: 1.25;
+margin-bottom: 16px;
+margin-top: 24px;
+}
+.markdown-body h1 {
+font-size: 2em;
+}
+.markdown-body h1,
+.markdown-body h2 {
+border-bottom: 1px solid #eaecef;
+padding-bottom: .3em;
+}
+.markdown-body h2 {
+font-size: 1.5em;
+}
+.markdown-body h3 {
+font-size: 1.25em;
+}
+.markdown-body h4 {
+font-size: 1em;
+}
+.markdown-body h5 {
+font-size: .875em;
+}
+.markdown-body h6 {
+color: #6a737d;
+font-size: .85em;
+}
+.markdown-body ol,
+.markdown-body ul {
+padding-left: 2em;
+}
+.markdown-body ol ol,
+.markdown-body ol ul,
+.markdown-body ul ol,
+.markdown-body ul ul {
+margin-bottom: 0;
+margin-top: 0;
+}
+.markdown-body li {
+word-wrap: break-all;
+}
+.markdown-body li>p {
+margin-top: 16px;
+}
+.markdown-body li+li {
+margin-top: .25em;
+}
+.markdown-body dl {
+padding: 0;
+}
+.markdown-body dl dt {
+font-size: 1em;
+font-style: italic;
+font-weight: 600;
+margin-top: 16px;
+padding: 0;
+}
+.markdown-body dl dd {
+margin-bottom: 16px;
+padding: 0 16px;
+}
+.markdown-body table {
+display: block;
+overflow: auto;
+width: 100%;
+}
+.markdown-body table th {
+font-weight: 600;
+}
+.markdown-body table td,
+.markdown-body table th {
+border: 1px solid #dfe2e5;
+padding: 6px 13px;
+}
+.markdown-body table tr {
+background-color: #fff;
+border-top: 1px solid #c6cbd1;
+}
+.markdown-body table tr:nth-child(2n) {
+background-color: #f6f8fa;
+}
+.markdown-body img {
+background-color: #fff;
+box-sizing: content-box;
+max-width: 100%;
+}
+.markdown-body img[align=right] {
+padding-left: 20px;
+}
+.markdown-body img[align=left] {
+padding-right: 20px;
+}
+.markdown-body code {
+background-color: rgba(27,31,35,.05);
+border-radius: 3px;
+font-size: 85%;
+margin: 0;
+padding: .2em .4em;
+}
+.markdown-body pre {
+word-wrap: normal;
+}
+.markdown-body pre>code {
+background: transparent;
+border: 0;
+font-size: 100%;
+margin: 0;
+padding: 0;
+white-space: pre-wrap; 
+word-break: normal;
+}
+.markdown-body .highlight {
+margin-bottom: 16px;
+}
+.markdown-body .highlight pre {
+margin-bottom: 0;
+word-break: normal;
+}
+.markdown-body .highlight pre,
+.markdown-body pre {
+background-color: #f6f8fa;
+border-radius: 3px;
+font-size: 85%;
+line-height: 1.45;
+overflow: auto;
+padding: 16px;
+}
+.markdown-body pre code {
+background-color: transparent;
+border: 0;
+display: inline;
+line-height: inherit;
+margin: 0;
+max-width: auto;
+overflow: visible;
+padding: 0;
+word-wrap: normal;
+}
+.markdown-body .commit-tease-sha {
+color: #444d56;
+display: inline-block;
+font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+font-size: 90%;
+}
+.markdown-body .blob-wrapper {
+border-bottom-left-radius: 3px;
+border-bottom-right-radius: 3px;
+overflow-x: auto;
+overflow-y: hidden;
+}
+.markdown-body .blob-wrapper-embedded {
+max-height: 240px;
+overflow-y: auto;
+}
+.markdown-body .blob-num {
+-moz-user-select: none;
+-ms-user-select: none;
+-webkit-user-select: none;
+color: rgba(27,31,35,.3);
+cursor: pointer;
+font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+font-size: 12px;
+line-height: 20px;
+min-width: 50px;
+padding-left: 10px;
+padding-right: 10px;
+text-align: right;
+user-select: none;
+vertical-align: top;
+white-space: nowrap;
+width: 1%;
+}
+.markdown-body .blob-num:hover {
+color: rgba(27,31,35,.6);
+}
+.markdown-body .blob-num:before {
+content: attr(data-line-number);
+}
+.markdown-body .blob-code {
+line-height: 20px;
+padding-left: 10px;
+padding-right: 10px;
+position: relative;
+vertical-align: top;
+}
+.markdown-body .blob-code-inner {
+color: #24292e;
+font-family: SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+font-size: 12px;
+overflow: visible;
+white-space: pre;
+word-wrap: normal;
+}
+.markdown-body .pl-token.active,
+.markdown-body .pl-token:hover {
+background: #ffea7f;
+cursor: pointer;
+}
+.markdown-body kbd {
+background-color: #fafbfc;
+border: 1px solid #d1d5da;
+border-bottom-color: #c6cbd1;
+border-radius: 3px;
+box-shadow: inset 0 -1px 0 #c6cbd1;
+color: #444d56;
+display: inline-block;
+font: 11px SFMono-Regular,Consolas,Liberation Mono,Menlo,Courier,monospace;
+line-height: 10px;
+padding: 3px 5px;
+vertical-align: middle;
+}
+.markdown-body :checked+.radio-label {
+border-color: #0366d6;
+position: relative;
+z-index: 1;
+}
+.markdown-body .tab-size[data-tab-size="1"] {
+-moz-tab-size: 1;
+tab-size: 1;
+}
+.markdown-body .tab-size[data-tab-size="2"] {
+-moz-tab-size: 2;
+tab-size: 2;
+}
+.markdown-body .tab-size[data-tab-size="3"] {
+-moz-tab-size: 3;
+tab-size: 3;
+}
+.markdown-body .tab-size[data-tab-size="4"] {
+-moz-tab-size: 4;
+tab-size: 4;
+}
+.markdown-body .tab-size[data-tab-size="5"] {
+-moz-tab-size: 5;
+tab-size: 5;
+}
+.markdown-body .tab-size[data-tab-size="6"] {
+-moz-tab-size: 6;
+tab-size: 6;
+}
+.markdown-body .tab-size[data-tab-size="7"] {
+-moz-tab-size: 7;
+tab-size: 7;
+}
+.markdown-body .tab-size[data-tab-size="8"] {
+-moz-tab-size: 8;
+tab-size: 8;
+}
+.markdown-body .tab-size[data-tab-size="9"] {
+-moz-tab-size: 9;
+tab-size: 9;
+}
+.markdown-body .tab-size[data-tab-size="10"] {
+-moz-tab-size: 10;
+tab-size: 10;
+}
+.markdown-body .tab-size[data-tab-size="11"] {
+-moz-tab-size: 11;
+tab-size: 11;
+}
+.markdown-body .tab-size[data-tab-size="12"] {
+-moz-tab-size: 12;
+tab-size: 12;
+}
+.markdown-body .task-list-item {
+list-style-type: none;
+}
+.markdown-body .task-list-item+.task-list-item {
+margin-top: 3px;
+}
+.markdown-body .task-list-item input {
+margin: 0 .2em .25em -1.6em;
+vertical-align: middle;
+}
+.markdown-body hr {
+border-bottom-color: #eee;
+}
+.markdown-body .pl-0 {
+padding-left: 0!important;
+}
+.markdown-body .pl-1 {
+padding-left: 4px!important;
+}
+.markdown-body .pl-2 {
+padding-left: 8px!important;
+}
+.markdown-body .pl-3 {
+padding-left: 16px!important;
+}
+.markdown-body .pl-4 {
+padding-left: 24px!important;
+}
+.markdown-body .pl-5 {
+padding-left: 32px!important;
+}
+.markdown-body .pl-6 {
+padding-left: 40px!important;
+}
+.markdown-body .pl-7 {
+padding-left: 48px!important;
+}
+.markdown-body .pl-8 {
+padding-left: 64px!important;
+}
+.markdown-body .pl-9 {
+padding-left: 80px!important;
+}
+.markdown-body .pl-10 {
+padding-left: 96px!important;
+}
+.markdown-body .pl-11 {
+padding-left: 112px!important;
+}
+.markdown-body .pl-12 {
+padding-left: 128px!important;
+}
+</style>
+	<style>
+.markdown-body {
+box-sizing: border-box;
+min-width: 200px;
+margin: 0 auto;
+padding: 45px;
+}
+@media (max-width: 767px) {
+.markdown-body {
+padding: 1px;
+font-size: 12px;
+}
+.markdown-body table td,
+.markdown-body table th {
+border: 1px solid #dfe2e5;
+padding-left: 2px;
+padding-right: 2px;
+page-break-inside : avoid;
+font-size: 10px;
+}
+.markdown-body ul {
+padding-left: 0;
+margin-left: 2em;
+}
+.markdown-body table th {
+background-color : #DCDCDC;
+}
+p {
+widows : 2;
+}
+}
+@page {
+@bottom-center {
+content: "Published";
+}
+}
+@page :right {
+@top-left {
+content: "DSP2043";
+}
+@top-right {
+content: "Redfish Mockups Bundle Readme";
+}
+@bottom-left {
+content: "Version 2026.2";
+}
+@bottom-right {
+content: counter(page);
+}
+}
+@page :left {
+@top-left {
+content: "Redfish Mockups Bundle Readme";
+}
+@top-right {
+content: "DSP2043";
+}
+@bottom-left {
+content: counter(page);
+}
+@bottom-right {
+content: "Version 2026.2";
+}
+}
+</style>
+  <!--[if lt IE 9]>
+    <script src="//cdnjs.cloudflare.com/ajax/libs/html5shiv/3.7.3/html5shiv-printshiv.min.js"></script>
+  <![endif]-->
+</head>
+
+<body>
+<div align="right">
+<img role="img" aria-label="Redfish DMTF Logo" src="data:image/jpeg;base64,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" alt="Redfish DMTF Logo">
+<strong>
+	<p>Document Identifier: <span class="dsp">DSP2043</span></p>
+	<p>Date: 2026-08-07</p>
+	<p>Version: 2026.2</p>
+</strong>
+</div>
+<header id="title-block-header">
+<h1 class="title">Redfish Mockups Bundle Readme</h1> 
+
+</br></br></br></br></br>
+
+
+</header>
+<strong>
+	<p>Supersedes: 2026.1</p>
+	<p>Document Class: Informational</p>
+	<p>Document Status: Published</p>
+	<p>Document Language: en-US</span></p>
+</strong> 
+  <div class="copyright">
+    Copyright Notice</br>
+    Copyright © 2015-2026 DMTF. All rights reserved.
+  </div>
+  <p>DMTF is a not-for-profit association of industry members dedicated to promoting enterprise and systems management and interoperability. Members and non-members may reproduce DMTF specifications and documents, provided that correct attribution is given. As DMTF specifications may be revised from time to time, the particular version and release date should always be noted.</p>
+  <p>Implementation of certain elements of this standard or proposed standard may be subject to third party patent rights, including provisional patent rights (herein &quot;patent rights&quot;). DMTF makes no representations to users of the standard as to the existence of such rights, and is not responsible to recognize, disclose, or identify any or all such third party patent right, owners or claimants, nor for any incomplete or inaccurate identification or disclosure of such rights, owners or claimants. DMTF shall have no liability to any party, in any manner or circumstance, under any legal theory whatsoever, for failure to recognize, disclose, or identify any such third party patent rights, or for such party&#39;s reliance on the standard or incorporation thereof in its product, protocols or testing procedures. DMTF shall have no liability to any party implementing such standard, whether such implementation is foreseeable or not, nor to any patent owner or claimant, and shall have no liability or responsibility for costs or losses incurred if a standard is withdrawn or modified after publication, and shall be indemnified and held harmless by any party implementing the standard from any and all claims of infringement by a patent owner for such implementations.</p>
+  <p>For information about patents held by third-parties which have notified DMTF that, in their opinion, such patent may relate to or impact implementations of DMTF standards, visit <a href="http://www.dmtf.org/about/policies/disclosures.php">http://www.dmtf.org/about/policies/disclosures.php</a>.</p>
+  <p>This document&#39;s normative language is English. Translation into other languages is permitted.</p>
+<p id="toc-header">CONTENTS</p>
+<nav class="toc">
+<ul>
+<li><a href="#foreword" id="toc-foreword"><span class="toc-section-number">1</span> Foreword</a></li>
+<li><a href="#redfish-mockups-bundle-contents" id="toc-redfish-mockups-bundle-contents"><span class="toc-section-number">2</span> Redfish Mockups Bundle contents</a>
+<ul>
+<li><a href="#simple-rack-mounted-server-public-rackmount1" id="toc-simple-rack-mounted-server-public-rackmount1"><span class="toc-section-number">2.1</span> Simple Rack-mounted Server
+(public-rackmount1)</a></li>
+<li><a href="#bladed-system-public-bladed" id="toc-bladed-system-public-bladed"><span class="toc-section-number">2.2</span> Bladed System
+(public-bladed)</a></li>
+<li><a href="#simple-rack-mounted-server-with-local-storage-public-localstorage" id="toc-simple-rack-mounted-server-with-local-storage-public-localstorage"><span class="toc-section-number">2.3</span> Simple Rack-mounted Server with
+Local Storage (public-localstorage)</a></li>
+<li><a href="#simple-rack-mounted-server-with-local-storage-that-supports-multiple-physical-functions-public-mpf" id="toc-simple-rack-mounted-server-with-local-storage-that-supports-multiple-physical-functions-public-mpf"><span class="toc-section-number">2.4</span> Simple Rack-mounted Server with
+Local Storage that supports multiple physical functions
+(public-mpf)</a></li>
+<li><a href="#sas-fabric-public-sasfabric" id="toc-sas-fabric-public-sasfabric"><span class="toc-section-number">2.5</span> SAS Fabric
+(public-sasfabric)</a></li>
+<li><a href="#proposed-ocp-redfish-profile-public-catfish" id="toc-proposed-ocp-redfish-profile-public-catfish"><span class="toc-section-number">2.6</span> Proposed OCP Redfish Profile
+(public-catfish)</a></li>
+<li><a href="#composable-system-via-specific-compositions-public-composability" id="toc-composable-system-via-specific-compositions-public-composability"><span class="toc-section-number">2.7</span> Composable System via Specific
+Compositions (public-composability)</a></li>
+<li><a href="#bladed-partitions-public-bladed-partitions" id="toc-bladed-partitions-public-bladed-partitions"><span class="toc-section-number">2.8</span> Bladed Partitions
+(public-bladed-partitions)</a></li>
+<li><a href="#composable-system-via-constrained-compositions-public-constrained-composition" id="toc-composable-system-via-constrained-compositions-public-constrained-composition"><span class="toc-section-number">2.9</span> Composable System via Constrained
+Compositions (public-constrained-composition)</a></li>
+<li><a href="#expansion-enclosure-with-resource-blocks-public-expansion-box" id="toc-expansion-enclosure-with-resource-blocks-public-expansion-box"><span class="toc-section-number">2.10</span> Expansion Enclosure with Resource
+Blocks (public-expansion-box)</a></li>
+<li><a href="#telemetry-service-public-telemetry" id="toc-telemetry-service-public-telemetry"><span class="toc-section-number">2.11</span> Telemetry Service
+(public-telemetry)</a></li>
+<li><a href="#power-distribution-unit-pdu-public-pdu" id="toc-power-distribution-unit-pdu-public-pdu"><span class="toc-section-number">2.12</span> Power Distribution Unit (PDU)
+(public-pdu)</a></li>
+<li><a href="#sample-service-with-oem-extensions-public-oem-examples" id="toc-sample-service-with-oem-extensions-public-oem-examples"><span class="toc-section-number">2.13</span> Sample Service with OEM
+Extensions (public-oem-examples)</a></li>
+<li><a href="#mockup-for-pmem-technologies-public-pmem-configuration" id="toc-mockup-for-pmem-technologies-public-pmem-configuration"><span class="toc-section-number">2.14</span> Mockup for PMEM technologies
+(public-pmem-configuration)</a></li>
+<li><a href="#nvme-of-jbof-public-nvmeof-jbof" id="toc-nvme-of-jbof-public-nvmeof-jbof"><span class="toc-section-number">2.15</span> NVMe-oF JBOF
+(public-nvmeof-jbof)</a></li>
+<li><a href="#advanced-communication-devices-public-acd" id="toc-advanced-communication-devices-public-acd"><span class="toc-section-number">2.16</span> Advanced Communication Devices
+(public-acd)</a></li>
+<li><a href="#composable-system-via-compose-action-with-manifest-public-compose-action" id="toc-composable-system-via-compose-action-with-manifest-public-compose-action"><span class="toc-section-number">2.17</span> Composable System via Compose
+Action with Manifest (public-compose-action)</a></li>
+<li><a href="#cables-public-cables" id="toc-cables-public-cables"><span class="toc-section-number">2.18</span> Cables (public-cables)</a></li>
+<li><a href="#power-shelf-public-power-shelf" id="toc-power-shelf-public-power-shelf"><span class="toc-section-number">2.19</span> Power Shelf
+(public-power-shelf)</a></li>
+<li><a href="#smartnics-public-smartnic" id="toc-smartnics-public-smartnic"><span class="toc-section-number">2.20</span> SmartNICs
+(public-smartnic)</a></li>
+<li><a href="#tower-server-public-tower" id="toc-tower-server-public-tower"><span class="toc-section-number">2.21</span> Tower Server
+(public-tower)</a></li>
+<li><a href="#cxl-public-cxl" id="toc-cxl-public-cxl"><span class="toc-section-number">2.22</span> CXL (public-cxl)</a></li>
+<li><a href="#coolant-distribution-unit-public-cooling-unit" id="toc-coolant-distribution-unit-public-cooling-unit"><span class="toc-section-number">2.23</span> Coolant Distribution Unit
+(public-cooling-unit)</a></li>
+<li><a href="#applications-on-a-system-public-applications" id="toc-applications-on-a-system-public-applications"><span class="toc-section-number">2.24</span> Applications on a System
+(public-applications)</a></li>
+</ul></li>
+</ul>
+</nav>
+<article class="markdown-body">
+<h1 data-number="1" id="foreword"><span class="header-section-number">1</span> Foreword</h1>
+<p>The following files are part of the Redfish development effort:</p>
+<ul>
+<li><a href="https://www.dmtf.org/dsp/DSP0218">DSP0218</a> - Platform
+Level Data Model (PLDM) for Redfish Device Enablement Specification -
+Binary-encoded JSON (BEJ) and dictionary-based mapping of Redfish
+schemas and properties into PLDM messages.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP0266">DSP0266</a> - Redfish
+Specification - Main Redfish Specification.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP0268">DSP0268</a> - Redfish
+Data Model Specification - Normative descriptions and additional text
+for every schema defined in DSP8010 and example payloads for every
+resource.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP0270">DSP0270</a> - Redfish
+Host Interface Specification - &quot;In-band&quot; or &quot;OS-based&quot; Redfish host
+interface.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP0272">DSP0272</a> - Redfish
+Interoperability Profiles Specification - Structure and JSON document
+that is used to define and publish an interoperability profile that
+checks an implementation&#39;s conformance to a defined minimum set of
+functionality.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP2043">DSP2043</a> - Redfish
+Mockups Bundle - Set of mockups that can be used as sample output from
+<code>GET</code> responses from a Redfish service. Informative in
+nature, it was used to develop the schema. A person can set up an NGINX
+or similar server and configure it to output JSON format and then use
+this directory for demonstration purposes.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP2044">DSP2044</a> - Redfish
+White Paper - Non-normative document helping those new to Redfish
+understand how to interact with the Redfish service and understand
+common functions and tasks.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP2046">DSP2046</a> - Redfish
+Resource and Schema Guide - Informative documentation regarding common
+Redfish resource properties and a listing of properties that can be
+found in each of the Redfish resources.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP2053">DSP2053</a> - Redfish
+Property Guide - Informative documentation providing an index to
+individual property definitions across all Redfish schema.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP2065">DSP2065</a> - Redfish
+Message Registry Guide - Informative documentation providing details
+regarding the messages defined in Redfish standard message
+registries.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP8010">DSP8010</a> - Redfish
+Schema - Redfish schema definitions. These files are normative in nature
+and are normatively referenced by the <em>Redfish Specification</em>.
+The three schema formats are CSDL (OData Common Schema Definition
+Language format, which is in XML), JSON Schema, and OpenAPI schema.
+These schema definitions should be functionally equivalent, thus
+specifying the schema in three different languages.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP8011">DSP8011</a> - Redfish
+Standard Registries - Redfish registry definitions. This bundle of
+Redfish registries includes message registries used for Redfish-defined
+messages including events and privilege maps.</li>
+<li><a href="https://www.dmtf.org/dsp/DSP8013">DSP8013</a> - Redfish
+Interoperability Profiles Bundle - Bundle of published Redfish
+interoperability profile documents and supporting schema and sample
+documents used for creating profiles.</li>
+</ul>
+<h1 data-number="2" id="redfish-mockups-bundle-contents"><span class="header-section-number">2</span> Redfish Mockups Bundle
+contents</h1>
+<p>This archive contains a number of mockups of various Redfish service
+implementations. They are intended to be a guide for learning about the
+Redfish Specification by showing typical examples of implementations.
+These mockups are not prototypes and do not reflect any actual product
+or Redfish implementation.</p>
+<p>Many of these mockups are also used to populate the Redfish Resource
+Explorer, part of the Redfish Developer Hub located at: <a href="http://redfish.dmtf.org" class="uri">http://redfish.dmtf.org</a></p>
+<h2 data-number="2.1" id="simple-rack-mounted-server-public-rackmount1"><span class="header-section-number">2.1</span> Simple Rack-mounted Server
+(public-rackmount1)</h2>
+<p>This illustration of a Redfish service implementation shows a typical
+rack-mount server, as commonly used in scale-out data centers. It
+depicts the types of information that can be expected, but does not
+represent an actual implementation.</p>
+<h2 data-number="2.2" id="bladed-system-public-bladed"><span class="header-section-number">2.2</span> Bladed System
+(public-bladed)</h2>
+<p>This example represents an enclosure of &quot;blade servers&quot; that share
+infrastructure components, such as power supplies and fans. Depicting an
+enclosure containing four blade servers (a total of five &quot;Chassis&quot;),
+this mockup demonstrates the modeling of multiple chassis and systems
+managed from a single Redfish service.</p>
+<h2 data-number="2.3" id="simple-rack-mounted-server-with-local-storage-public-localstorage"><span class="header-section-number">2.3</span> Simple Rack-mounted Server with
+Local Storage (public-localstorage)</h2>
+<p>This example shows a server with an implementation of the Redfish
+storage resources, showing an integrated RAID controller with four
+attached drives.</p>
+<h2 data-number="2.4" id="simple-rack-mounted-server-with-local-storage-that-supports-multiple-physical-functions-public-mpf"><span class="header-section-number">2.4</span> Simple Rack-mounted Server with
+Local Storage that supports multiple physical functions
+(public-mpf)</h2>
+<p>This example shows a server with an implementation of the Redfish
+storage resources, showing an MPF RAID controller with four attached
+drives managed by two physical functions.</p>
+<h2 data-number="2.5" id="sas-fabric-public-sasfabric"><span class="header-section-number">2.5</span> SAS Fabric
+(public-sasfabric)</h2>
+<p>This example shows a more complex storage implementation using a pair
+of SAS switches, storage enclosures and multiple storage devices.</p>
+<h2 data-number="2.6" id="proposed-ocp-redfish-profile-public-catfish"><span class="header-section-number">2.6</span> Proposed OCP Redfish Profile
+(public-catfish)</h2>
+<p>This draft example, for ongoing development, represents a proposed
+minimal Redfish data model &quot;profile&quot; that meets the needs of the Open
+Compute Project&#39;s Hardware Management requirements. This draft profile
+is intended to help define a list of required properties so that
+essential management-related tasks, as defined by OCP, can be performed
+on any Redfish implementation.</p>
+<h2 data-number="2.7" id="composable-system-via-specific-compositions-public-composability"><span class="header-section-number">2.7</span> Composable System via Specific
+Compositions (public-composability)</h2>
+<p>This example shows a service with various sets of disaggregated
+hardware as resources. It provides an example two composed systems
+utilizing some of the disaggregated hardware. It also shows how Resource
+Zones can provide information about binding restrictions. It also shows
+how to express composition requests using the specific composition
+format.</p>
+<h2 data-number="2.8" id="bladed-partitions-public-bladed-partitions"><span class="header-section-number">2.8</span> Bladed Partitions
+(public-bladed-partitions)</h2>
+<p>This example shows how Redfish Composability can be used to create
+composed Computer System instances from smaller sets of Computer
+Systems. A top level enclosure called &quot;Enclosure&quot; contains a set of
+blades, which are used to create the composed Computer Systems.</p>
+<h2 data-number="2.9" id="composable-system-via-constrained-compositions-public-constrained-composition"><span class="header-section-number">2.9</span> Composable System via
+Constrained Compositions (public-constrained-composition)</h2>
+<p>This example shows a service with various sets of disaggregated
+hardware as resources. It provides an example two composed systems
+utilizing some of the disaggregated hardware. It also shows how Resource
+Zones can provide information about binding restrictions. It also shows
+how to express composition requests using the constrained composition
+format.</p>
+<h2 data-number="2.10" id="expansion-enclosure-with-resource-blocks-public-expansion-box"><span class="header-section-number">2.10</span> Expansion Enclosure with
+Resource Blocks (public-expansion-box)</h2>
+<p>This example shows a service with various sets of disaggregated
+hardware as resources. The service itself provides information about the
+types of hardware available in the enclosure, but provides no
+composability functionality. In these circumstances, an external Redfish
+service might be used to orchestrate how the equipment is provisioned
+for composability.</p>
+<h2 data-number="2.11" id="telemetry-service-public-telemetry"><span class="header-section-number">2.11</span> Telemetry Service
+(public-telemetry)</h2>
+<p>This example shows a service that supports reporting telemetry data
+through the Telemetry Service. It has sample metric definitions and
+metric reports based upon data found in other portions of the data
+model.</p>
+<h2 data-number="2.12" id="power-distribution-unit-pdu-public-pdu"><span class="header-section-number">2.12</span> Power Distribution Unit (PDU)
+(public-pdu)</h2>
+<p>This example shows a set of managed power distribution units (PDU),
+including a rack-mount unit, a floor (row) PDU, and an automatic
+transfer switch.</p>
+<h2 data-number="2.13" id="sample-service-with-oem-extensions-public-oem-examples"><span class="header-section-number">2.13</span> Sample Service with OEM
+Extensions (public-oem-examples)</h2>
+<p>A lightweight Redfish service with OEM examples. The Service Root
+resource has been extended to have an OEM section. The service container
+also has an extension. The Account Service resource contains and OEM
+action. These OEM extensions are defined in the Contoso.com folder of
+the mockup.</p>
+<h2 data-number="2.14" id="mockup-for-pmem-technologies-public-pmem-configuration"><span class="header-section-number">2.14</span> Mockup for PMEM technologies
+(public-pmem-configuration)</h2>
+<p>A mockup of initial configurations for reporting PMEM Devices and
+then the configurations after a sequence of configuration requests.</p>
+<h2 data-number="2.15" id="nvme-of-jbof-public-nvmeof-jbof"><span class="header-section-number">2.15</span> NVMe-oF JBOF
+(public-nvmeof-jbof)</h2>
+<p>This mockup contains a sample Redfish service for an NVMe-oF JBOF.
+The storage resources off of service root contain the provisionable
+storage for external hosts. The fabric portion of the data model is used
+to express host connectivity to the different NVMe namespaces. It also
+contains a single SoC, represented as a computer system, that is used as
+the front-end for receiving NVMe-oF traffic before the drives are
+accessed.</p>
+<h2 data-number="2.16" id="advanced-communication-devices-public-acd"><span class="header-section-number">2.16</span> Advanced Communication Devices
+(public-acd)</h2>
+<p>This example shows a server with an implementation of the Redfish
+advanced communication device (ACD) model using the NetworkAdapter,
+NetworkDeviceFunction, and Port resources.</p>
+<h2 data-number="2.17" id="composable-system-via-compose-action-with-manifest-public-compose-action"><span class="header-section-number">2.17</span> Composable System via Compose
+Action with Manifest (public-compose-action)</h2>
+<p>This example shows a service with various composable elements. The
+composition service supports a Compose action, which allows a client to
+provide a manifest to perform a set of operations to allocate resources
+and compose systems. It also supports assignment of resource blocks into
+free and active pools.</p>
+<h2 data-number="2.18" id="cables-public-cables"><span class="header-section-number">2.18</span> Cables (public-cables)</h2>
+<p>This example shows an implementation that contains a set of cables
+and shows their connectivity to other components in the service.</p>
+<h2 data-number="2.19" id="power-shelf-public-power-shelf"><span class="header-section-number">2.19</span> Power Shelf
+(public-power-shelf)</h2>
+<p>This example shows an example power shelf with connections to an
+electrical bus.</p>
+<h2 data-number="2.20" id="smartnics-public-smartnic"><span class="header-section-number">2.20</span> SmartNICs
+(public-smartnic)</h2>
+<p>This example shows a server with two SmartNICs installed. Each
+SmartNIC is modeled as a Chassis resource. The SmartNIC in slot 1
+represents an SoC-based SmartNIC with its own system representation. The
+SmartNIC in slot 2 represents an FPGA-based SmartNIC. There is also an
+Ethernet fabric to show address pool configuration for the
+SmartNICs.</p>
+<h2 data-number="2.21" id="tower-server-public-tower"><span class="header-section-number">2.21</span> Tower Server
+(public-tower)</h2>
+<p>This illustration of a Redfish service implementation shows a fully
+featured tower server, as might be used in a rendering or development
+environment. It depicts the types of information that can be expected,
+but does not represent an actual implementation.</p>
+<h2 data-number="2.22" id="cxl-public-cxl"><span class="header-section-number">2.22</span> CXL (public-cxl)</h2>
+<p>This example shows an implementation that contains a set of local and
+remote CXL devices and shows their connectivity to other components in
+the service.</p>
+<h2 data-number="2.23" id="coolant-distribution-unit-public-cooling-unit"><span class="header-section-number">2.23</span> Coolant Distribution Unit
+(public-cooling-unit)</h2>
+<p>This example shows a rackmount coolant distribution unit (CDU) that
+supplies liquid to downstream equipment from a facility.</p>
+<h2 data-number="2.24" id="applications-on-a-system-public-applications"><span class="header-section-number">2.24</span> Applications on a System
+(public-applications)</h2>
+<p>This example shows the representation of an operating system (OS),
+applications, and virtual machines running on a system.</p>
+</article>
+</body>
+</html>

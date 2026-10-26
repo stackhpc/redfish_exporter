@@ -1,0 +1,22 @@
+{
+    "@odata.type": "#CoolantConnector.v1_5_0.CoolantConnector",
+    "Id": "CPU2",
+    "Name": "CPU #2 Cold Plate",
+    "Status": {
+        "State": "Enabled",
+        "Health": "OK"
+    },
+    "CoolantConnectorType": "Closed",
+    "RatedFlowLitersPerMinute": 30,
+    "SupplyTemperatureCelsius": {
+        "Reading": 22.4
+    },
+    "ReturnTemperatureCelsius": {
+        "Reading": 46.9
+    },
+    "DeltaTemperatureCelsius": {
+        "Reading": 24.5
+    },
+    "@odata.id": "/redfish/v1/Chassis/1U/ThermalSubsystem/CoolantConnectors/CPU2",
+    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright."
+}
