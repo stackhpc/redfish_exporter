@@ -8,6 +8,7 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stackhpc/redfish_exporter/collector/system/memory"
 	"github.com/stackhpc/redfish_exporter/common"
 	"github.com/stmcginnis/gofish/schemas"
 )
@@ -17,7 +18,6 @@ var (
 	SystemSubsystem                   = "system"
 	SystemLabelNames                  = []string{"hostname", "resource", "system_id"}
 	SystemBIOSLabelNames              = append(slices.Clone(SystemLabelNames), "bios_version")
-	SystemMemoryLabelNames            = []string{"hostname", "resource", "memory", "memory_id"}
 	SystemProcessorLabelNames         = []string{"hostname", "resource", "processor", "processor_id"}
 	SystemVolumeLabelNames            = []string{"hostname", "resource", "volume", "volume_id"}
 	SystemDeviceLabelNames            = []string{"hostname", "resource", "device"}
@@ -58,10 +58,6 @@ func createSystemMetricMap() map[string]common.Metric {
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_state", fmt.Sprintf("system overall processor state,%s", common.StateHelp), SystemLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_health_state", fmt.Sprintf("system overall processor health,%s", common.HealthHelp), SystemLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_count", "system total processor count", SystemLabelNames)
-
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "memory_state", fmt.Sprintf("system memory state,%s", common.StateHelp), SystemMemoryLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "memory_health_state", fmt.Sprintf("system memory health state,%s", common.HealthHelp), SystemMemoryLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "memory_capacity", "system memory capacity, MiB", SystemMemoryLabelNames)
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_state", fmt.Sprintf("system processor state,%s", common.StateHelp), SystemProcessorLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_health_state", fmt.Sprintf("system processor health state,%s", common.HealthHelp), SystemProcessorLabelNames)
@@ -194,7 +190,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			// get system OdataID
 			//systemOdataID := system.ODataID
 
-			wg1 := &sync.WaitGroup{}  // memory
 			wg2 := &sync.WaitGroup{}  // processor
 			wg3 := &sync.WaitGroup{}  // storage/volumes
 			wg4 := &sync.WaitGroup{}  // storage/drives
@@ -205,8 +200,11 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			wg9 := &sync.WaitGroup{}  // pcie functions
 			wg10 := &sync.WaitGroup{} // log services
 
+			wg := &sync.WaitGroup{}
+
 			if !slices.Contains(disabledMetrics, "memory") {
-				processMemory(system, systemLogContext, wg1, ch, systemHostName)
+				collector := memory.NewCollector(s.Ctx, s.Log, system)
+				wg.Go(func() { collector.Collect(ch) })
 			}
 
 			if !slices.Contains(disabledMetrics, "processor") {
@@ -255,7 +253,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 				}
 			}
 
-			wg1.Wait()
 			wg2.Wait()
 			wg3.Wait()
 			wg4.Wait()
@@ -266,24 +263,11 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			wg9.Wait()
 			wg10.Wait()
 
+			wg.Wait()
+
 			systemLogContext.Info("collector scrape completed")
 		}
 		s.collectorScrapeStatus.WithLabelValues("system").Set(float64(1))
-	}
-}
-
-func processMemory(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg1 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
-	memories, err := system.Memory()
-	if err != nil {
-		systemLogContext.Error("error getting memory data from system", "operation", "system.Memory()", "err", err)
-	} else if memories == nil {
-		systemLogContext.Info("no memory data found", "operation", "system.Memory()")
-	} else {
-		wg1.Add(len(memories))
-
-		for _, memory := range memories {
-			go parseMemory(ch, systemHostName, memory, wg1)
-		}
 	}
 }
 
@@ -464,26 +448,6 @@ func processNetworkInterfaces(system *schemas.ComputerSystem, systemLogContext *
 		for _, networkInterface := range networkInterfaces {
 			go parseNetworkInterface(ch, systemHostName, networkInterface, wg6)
 		}
-	}
-}
-
-func parseMemory(ch chan<- prometheus.Metric, systemHostName string, memory *schemas.Memory, wg *sync.WaitGroup) {
-	defer wg.Done()
-	memoryName := memory.Name
-	memoryID := memory.ID
-	//memoryDeviceLocator := memory.DeviceLocator
-	memoryState := memory.Status.State
-	memoryHealthState := memory.Status.Health
-
-	systemMemoryLabelValues := []string{systemHostName, "memory", memoryName, memoryID}
-	if memoryStateValue, ok := common.ParseCommonStatusState(memoryState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_state"].Desc, prometheus.GaugeValue, memoryStateValue, systemMemoryLabelValues...)
-	}
-	if memoryHealthStateValue, ok := common.ParseCommonStatusHealth(memoryHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_health_state"].Desc, prometheus.GaugeValue, memoryHealthStateValue, systemMemoryLabelValues...)
-	}
-	if memory.CapacityMiB != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_memory_capacity"].Desc, prometheus.GaugeValue, float64(*memory.CapacityMiB), systemMemoryLabelValues...)
 	}
 }
 
