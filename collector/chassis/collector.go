@@ -9,6 +9,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stmcginnis/gofish/schemas"
 
+	"github.com/stackhpc/redfish_exporter/collector/chassis/network_adapters"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/power"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/thermal"
 	"github.com/stackhpc/redfish_exporter/common"
@@ -19,8 +20,6 @@ var (
 	ChassisSubsystem                  = "chassis"
 	ChassisLabelNames                 = []string{"resource", "chassis_id"}
 	ChassisModel                      = []string{"resource", "chassis_id", "manufacturer", "model", "part_number", "sku"}
-	ChassisNetworkAdapterLabelNames   = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id"}
-	ChassisNetworkPortLabelNames      = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id", "network_port", "network_port_id", "network_port_type", "network_port_speed", "network_port_connectiont_type", "network_physical_port_number"}
 	ChassisPhysicalSecurityLabelNames = []string{"resource", "chassis_id", "intrusion_sensor_number", "intrusion_sensor_rearm"}
 
 	ChassisLogServiceLabelNames = []string{"chassis_id", "log_service", "log_service_id", "log_service_enabled", "log_service_overwrite_policy"}
@@ -44,12 +43,6 @@ func createChassisMetricMap() map[string]common.Metric {
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "state", fmt.Sprintf("state of chassis,%s", common.StateHelp), ChassisLabelNames)
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "model_info", "organization responsible for producing the chassis, the name by which the manufacturer generally refers to the chassis, and a part number and sku assigned by the organization that is responsible for producing or manufacturing the chassis", ChassisModel)
 
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "network_adapter_state", fmt.Sprintf("chassis network adapter state,%s", common.StateHelp), ChassisNetworkAdapterLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "network_adapter_health_state", fmt.Sprintf("chassis network adapter health state,%s", common.HealthHelp), ChassisNetworkAdapterLabelNames)
-
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "network_port_state", fmt.Sprintf("chassis network port state,%s", common.StateHelp), ChassisNetworkPortLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "network_port_health_state", fmt.Sprintf("chassis network port health state,%s", common.HealthHelp), ChassisNetworkPortLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "network_port_link_state", fmt.Sprintf("chassis network port link state state,%s", common.PortLinkHelp), ChassisNetworkPortLabelNames)
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "physical_security_sensor_state", fmt.Sprintf("indicates the known state of the physical security sensor, such as if it is hardware intrusion detected,%s", common.IntrusionSensorHelp), ChassisPhysicalSecurityLabelNames)
 
 	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "log_service_state", fmt.Sprintf("chassis log service state,%s", common.StateHelp), ChassisLogServiceLabelNames)
@@ -130,23 +123,8 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 			power := power.NewCollector(c.Ctx, c.Log, chassis)
 			wg.Go(func() { power.Collect(ch) })
 
-			// process NetapAdapter
-
-			networkAdapters, err := chassis.NetworkAdapters()
-			if err != nil {
-				chassisLogContext.Error("error getting network adapters data from chassis", "operation", "chassis.NetworkAdapters()", "err", err)
-			} else if networkAdapters == nil {
-				chassisLogContext.Info("no network adapters data found", "operation", "chassis.NetworkAdapters()")
-			} else {
-				wg5 := &sync.WaitGroup{}
-				wg5.Add(len(networkAdapters))
-
-				for _, networkAdapter := range networkAdapters {
-					if err = parseNetworkAdapter(ch, chassisID, networkAdapter, wg5); err != nil {
-						chassisLogContext.Error("error getting network ports from network adapter", "operation", "chassis.NetworkAdapters()", "err", err)
-					}
-				}
-			}
+			network_adapters := network_adapters.NewCollector(c.Ctx, c.Log, chassis)
+			wg.Go(func() { network_adapters.Collect(ch) })
 
 			physicalSecurity := chassis.PhysicalSecurity
 			if physicalSecurity != (schemas.PhysicalSecurity{}) {
@@ -184,66 +162,6 @@ func (c *ChassisCollector) Collect(ch chan<- prometheus.Metric) {
 
 	wg.Wait()
 	c.collectorScrapeStatus.WithLabelValues("chassis").Set(float64(1))
-}
-
-
-func parseNetworkAdapter(ch chan<- prometheus.Metric, chassisID string, networkAdapter *schemas.NetworkAdapter, wg *sync.WaitGroup) error {
-	defer wg.Done()
-	networkAdapterName := networkAdapter.Name
-	networkAdapterID := networkAdapter.ID
-	networkAdapterState := networkAdapter.Status.State
-	networkAdapterHealthState := networkAdapter.Status.Health
-	chassisNetworkAdapterLabelValues := []string{"network_adapter", chassisID, networkAdapterName, networkAdapterID}
-	if networkAdapterStateValue, ok := common.ParseCommonStatusState(networkAdapterState); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_network_adapter_state"].Desc, prometheus.GaugeValue, networkAdapterStateValue, chassisNetworkAdapterLabelValues...)
-	}
-	if networkAdapterHealthStateValue, ok := common.ParseCommonStatusHealth(networkAdapterHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_network_adapter_health_state"].Desc, prometheus.GaugeValue, networkAdapterHealthStateValue, chassisNetworkAdapterLabelValues...)
-	}
-
-	if networkPorts, err := networkAdapter.NetworkPorts(); err != nil {
-		return err
-	} else {
-		wg6 := &sync.WaitGroup{}
-		wg6.Add(len(networkPorts))
-		for _, networkPort := range networkPorts {
-			go parseNetworkPort(ch, chassisID, networkPort, networkAdapterName, networkAdapterID, wg6)
-		}
-		wg6.Wait()
-	}
-	return nil
-}
-
-func parsePortLinkStatus(status schemas.NetworkPortLinkStatus) (float64, bool) {
-	if bytes.Equal([]byte(status), []byte("Up")) {
-		return float64(1), true
-	}
-	return float64(0), false
-}
-
-func parseNetworkPort(ch chan<- prometheus.Metric, chassisID string, networkPort *schemas.NetworkPort, networkAdapterName string, networkAdapterID string, wg *sync.WaitGroup) {
-	defer wg.Done()
-	networkPortName := networkPort.Name
-	networkPortID := networkPort.ID
-	networkPortState := networkPort.Status.State
-	networkLinkStatus := networkPort.LinkStatus
-	networkPortLinkType := networkPort.ActiveLinkTechnology
-	networkPortLinkSpeed := fmt.Sprintf("%d Mbps", networkPort.CurrentLinkSpeedMbps)
-	networkPortHealthState := networkPort.Status.Health
-	networkPortConnectionType := networkPort.FCPortConnectionType
-	networkPhysicalPortNumber := networkPort.PhysicalPortNumber
-	chassisNetworkPortLabelValues := []string{"network_port", chassisID, networkAdapterName, networkAdapterID, networkPortName, networkPortID, string(networkPortLinkType), networkPortLinkSpeed, string(networkPortConnectionType), networkPhysicalPortNumber}
-
-	if networkLinkStatusValue, ok := parsePortLinkStatus(networkLinkStatus); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_network_port_link_state"].Desc, prometheus.GaugeValue, networkLinkStatusValue, chassisNetworkPortLabelValues...)
-	}
-
-	if networkPortStateValue, ok := common.ParseCommonStatusState(networkPortState); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_network_port_state"].Desc, prometheus.GaugeValue, networkPortStateValue, chassisNetworkPortLabelValues...)
-	}
-	if networkPortHealthStateValue, ok := common.ParseCommonStatusHealth(networkPortHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_network_port_health_state"].Desc, prometheus.GaugeValue, networkPortHealthStateValue, chassisNetworkPortLabelValues...)
-	}
 }
 
 func parsePhySecIntrusionSensor(method schemas.IntrusionSensor) (float64, bool) {
