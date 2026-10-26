@@ -9,6 +9,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/collector/system/memory"
+	"github.com/stackhpc/redfish_exporter/collector/system/processors"
 	"github.com/stackhpc/redfish_exporter/common"
 	"github.com/stmcginnis/gofish/schemas"
 )
@@ -18,7 +19,6 @@ var (
 	SystemSubsystem                   = "system"
 	SystemLabelNames                  = []string{"hostname", "resource", "system_id"}
 	SystemBIOSLabelNames              = append(slices.Clone(SystemLabelNames), "bios_version")
-	SystemProcessorLabelNames         = []string{"hostname", "resource", "processor", "processor_id"}
 	SystemVolumeLabelNames            = []string{"hostname", "resource", "volume", "volume_id"}
 	SystemDeviceLabelNames            = []string{"hostname", "resource", "device"}
 	SystemDriveLabelNames             = []string{"hostname", "resource", "drive", "drive_id"}
@@ -58,13 +58,6 @@ func createSystemMetricMap() map[string]common.Metric {
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_state", fmt.Sprintf("system overall processor state,%s", common.StateHelp), SystemLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_health_state", fmt.Sprintf("system overall processor health,%s", common.HealthHelp), SystemLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_count", "system total processor count", SystemLabelNames)
-
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_state", fmt.Sprintf("system processor state,%s", common.StateHelp), SystemProcessorLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_health_state", fmt.Sprintf("system processor health state,%s", common.HealthHelp), SystemProcessorLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_total_threads", "system processor total threads", SystemProcessorLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_total_threads_enabled", "system processor total enabled threads", SystemProcessorLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_total_cores", "system processor total cores", SystemProcessorLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "processor_total_cores_enabled", "system processor total enabled cores", SystemProcessorLabelNames)
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "simple_storage_device_state", fmt.Sprintf("system simple storage device state,%s", common.StateHelp), SystemDeviceLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "simple_storage_device_health_state", fmt.Sprintf("system simple storage device health state,%s", common.HealthHelp), SystemDeviceLabelNames)
@@ -190,7 +183,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			// get system OdataID
 			//systemOdataID := system.ODataID
 
-			wg2 := &sync.WaitGroup{}  // processor
 			wg3 := &sync.WaitGroup{}  // storage/volumes
 			wg4 := &sync.WaitGroup{}  // storage/drives
 			wg5 := &sync.WaitGroup{}  // pcie devices
@@ -208,7 +200,8 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 
 			if !slices.Contains(disabledMetrics, "processor") {
-				processProcessors(system, systemLogContext, wg2, ch, systemHostName)
+				collector := processors.NewCollector(s.Ctx, s.Log, system)
+				wg.Go(func() { collector.Collect(ch) })
 			}
 
 			if !slices.Contains(disabledMetrics, "storage") {
@@ -253,7 +246,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 				}
 			}
 
-			wg2.Wait()
 			wg3.Wait()
 			wg4.Wait()
 			wg5.Wait()
@@ -268,22 +260,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			systemLogContext.Info("collector scrape completed")
 		}
 		s.collectorScrapeStatus.WithLabelValues("system").Set(float64(1))
-	}
-}
-
-func processProcessors(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg2 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
-	processors, err := system.Processors()
-	if err != nil {
-		systemLogContext.Error("error getting processor data from system", "operation", "system.Processors()", "err", err)
-	} else if processors == nil {
-		systemLogContext.Info("no processor data found", "operation", "system.Processors()")
-	} else {
-		wg2.Add(len(processors))
-
-		for _, processor := range processors {
-			go parseProcessor(ch, systemHostName, processor, wg2)
-
-		}
 	}
 }
 
@@ -451,30 +427,6 @@ func processNetworkInterfaces(system *schemas.ComputerSystem, systemLogContext *
 	}
 }
 
-func parseProcessor(ch chan<- prometheus.Metric, systemHostName string, processor *schemas.Processor, wg *sync.WaitGroup) {
-	defer wg.Done()
-
-	systemProcessorLabelValues := []string{systemHostName, "processor", processor.Name, processor.ID}
-
-	if processorStateValue, ok := common.ParseCommonStatusState(processor.Status.State); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_state"].Desc, prometheus.GaugeValue, processorStateValue, systemProcessorLabelValues...)
-	}
-	if processorHealthStateValue, ok := common.ParseCommonStatusHealth(processor.Status.Health); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_health_state"].Desc, prometheus.GaugeValue, processorHealthStateValue, systemProcessorLabelValues...)
-	}
-	if processor.TotalThreads != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_threads"].Desc, prometheus.GaugeValue, float64(*processor.TotalThreads), systemProcessorLabelValues...)
-	}
-	if processor.TotalEnabledThreads != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_threads_enabled"].Desc, prometheus.GaugeValue, float64(*processor.TotalThreads), systemProcessorLabelValues...)
-	}
-	if processor.TotalCores != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_cores"].Desc, prometheus.GaugeValue, float64(*processor.TotalCores), systemProcessorLabelValues...)
-	}
-	if processor.TotalEnabledCores != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_processor_total_cores_enabled"].Desc, prometheus.GaugeValue, float64(*processor.TotalCores), systemProcessorLabelValues...)
-	}
-}
 func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *schemas.Volume, wg *sync.WaitGroup) {
 	defer wg.Done()
 	volumeName := volume.Name
