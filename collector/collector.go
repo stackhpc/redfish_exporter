@@ -50,8 +50,13 @@ type RedfishCollector struct {
 // NewRedfishCollector return RedfishCollector
 func NewRedfishCollector(ctx *common.CollectionContext, logger *slog.Logger) *RedfishCollector {
 	var collectors map[string]prometheus.Collector
+<<<<<<< HEAD
 	chassisCollector := chassis.NewCollector(ctx, logger)
 	systemCollector := system.NewCollector(ctx, logger)
+=======
+	chassisCollector := chassis.NewChassisCollector(ctx, logger)
+	systemCollector := system.NewSystemCollector(ctx, logger)
+>>>>>>> 2595cb5 (Tidy up manager collector)
 	managerCollector := manager.NewCollector(ctx, logger)
 
 	collectors = map[string]prometheus.Collector{"chassis": chassisCollector, "system": systemCollector, "manager": managerCollector}

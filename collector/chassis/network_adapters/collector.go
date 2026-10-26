@@ -15,11 +15,7 @@ var (
 	Subsystem = "chassis"
 
 	ChassisNetworkAdapterLabelNames = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id"}
-<<<<<<< HEAD
 	ChassisNetworkPortLabelNames    = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id", "network_port", "network_port_id", "network_port_type", "network_port_connectiont_type", "network_physical_port_number"}
-=======
-	ChassisNetworkPortLabelNames    = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id", "network_port", "network_port_id", "network_port_type", "network_port_speed", "network_port_connectiont_type", "network_physical_port_number"}
->>>>>>> 4a72415 (Split network collector into sub-package, add support for new Port type)
 
 	metricMap = createMetricMap()
 )
@@ -33,10 +29,7 @@ func createMetricMap() map[string]common.Metric {
 	common.AddToMetricMap(metrics, Subsystem, "network_port_state", fmt.Sprintf("chassis network port state,%s", common.StateHelp), ChassisNetworkPortLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "network_port_health_state", fmt.Sprintf("chassis network port health state,%s", common.HealthHelp), ChassisNetworkPortLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "network_port_link_state", fmt.Sprintf("chassis network port link state state,%s", common.PortLinkHelp), ChassisNetworkPortLabelNames)
-<<<<<<< HEAD
 	common.AddToMetricMap(metrics, Subsystem, "network_port_link_speed_gbps", fmt.Sprintf("chassis network port link speed in gbps"), ChassisNetworkPortLabelNames)
-=======
->>>>>>> 4a72415 (Split network collector into sub-package, add support for new Port type)
 
 	return metrics
 }
