@@ -8,6 +8,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
+	"github.com/stmcginnis/gofish/schemas"
 )
 
 // ManagerSubmanager is the manager subsystem
@@ -19,11 +20,11 @@ var (
 	ManagerLogServiceLabelNames = []string{"manager_id", "log_service", "log_service_id", "log_service_enabled", "log_service_overwrite_policy"}
 	ManagerLogEntryLabelNames   = []string{"manager_id", "log_service", "log_service_id", "log_entry", "log_entry_id", "log_entry_code", "log_entry_type", "log_entry_message_id", "log_entry_sensor_number", "log_entry_sensor_type"}
 
-	managerMetrics = createManagerMetricMap()
+	metricMap = createManagerMetricMap()
 )
 
-// ManagerCollector implements the prometheus.Collector.
-type ManagerCollector struct {
+// Collector implements the prometheus.Collector.
+type Collector struct {
 	Ctx                   *common.CollectionContext
 	metrics               map[string]common.Metric
 	collectorScrapeStatus *prometheus.GaugeVec
@@ -44,10 +45,10 @@ func createManagerMetricMap() map[string]common.Metric {
 	return managerMetrics
 }
 
-// NewManagerCollector returns a collector that collecting memory statistics
-func NewManagerCollector(ctx *common.CollectionContext, logger *slog.Logger) *ManagerCollector {
-	return &ManagerCollector{
-		metrics: managerMetrics,
+// NewCollector returns a collector that collecting memory statistics
+func NewCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector {
+	return &Collector{
+		metrics: metricMap,
 		Ctx:     ctx,
 		Log: logger.With(
 			"collector", "ManagerCollector",
@@ -64,7 +65,7 @@ func NewManagerCollector(ctx *common.CollectionContext, logger *slog.Logger) *Ma
 }
 
 // Describe implemented prometheus.Collector
-func (m *ManagerCollector) Describe(ch chan<- *prometheus.Desc) {
+func (m *Collector) Describe(ch chan<- *prometheus.Desc) {
 	for _, metric := range m.metrics {
 		ch <- metric.Desc
 	}
@@ -73,66 +74,71 @@ func (m *ManagerCollector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 // Collect implemented prometheus.Collector
-func (m *ManagerCollector) Collect(ch chan<- prometheus.Metric) {
-	collectorLogContext := m.Log
-	collectLogs := m.Ctx.CollectLogs
+func (m *Collector) Collect(ch chan<- prometheus.Metric) {
+	logContext := m.Log
 	//get service
 	service := m.Ctx.RedfishClient.Service
 
 	// get a list of managers from service
-	if managers, err := service.Managers(); err != nil {
-		collectorLogContext.Error("error getting managers from service", "operation", "service.Managers()", "err", err)
-	} else {
-		for _, manager := range managers {
-			managerLogContext := collectorLogContext.With("Manager", manager.ID)
-			managerLogContext.Info("collector scrape started")
-			// overall manager metrics
-			ManagerID := manager.ID
-			managerName := manager.Name
-			managerModel := manager.Model
-			managerType := fmt.Sprint(manager.ManagerType)
-			managerPowerState := manager.PowerState
-			managerState := manager.Status.State
-			managerHealthState := manager.Status.Health
-
-			ManagerLabelValues := []string{ManagerID, managerName, managerModel, managerType}
-
-			if managerHealthStateValue, ok := common.ParseCommonStatusHealth(managerHealthState); ok {
-				ch <- prometheus.MustNewConstMetric(m.metrics["manager_health_state"].Desc, prometheus.GaugeValue, managerHealthStateValue, ManagerLabelValues...)
-			}
-			if managerStateValue, ok := common.ParseCommonStatusState(managerState); ok {
-				ch <- prometheus.MustNewConstMetric(m.metrics["manager_state"].Desc, prometheus.GaugeValue, managerStateValue, ManagerLabelValues...)
-			}
-			if managerPowerStateValue, ok := common.ParseCommonPowerState(managerPowerState); ok {
-				ch <- prometheus.MustNewConstMetric(m.metrics["manager_power_state"].Desc, prometheus.GaugeValue, managerPowerStateValue, ManagerLabelValues...)
-			}
-			if manager.FirmwareVersion != "" {
-				ch <- prometheus.MustNewConstMetric(m.metrics["manager_firmware_info"].Desc, prometheus.GaugeValue, 1, append(ManagerLabelValues, manager.FirmwareVersion)...)
-			}
-
-			// process log services
-			if collectLogs {
-				logServices, err := manager.LogServices()
-				if err != nil {
-					managerLogContext.Error("error getting log services from manager", "operation", "manager.LogServices()", "err", err)
-				} else if logServices == nil {
-					managerLogContext.Info("no log services found", "operation", "manager.LogServices()")
-				} else {
-					wg := &sync.WaitGroup{}
-					wg.Add(len(logServices))
-
-					for _, logService := range logServices {
-						if err = common.ParseLogService(ch, managerMetrics, m.Ctx, managerLogContext, ManagerSubmanager, ManagerID, logService); err != nil {
-							managerLogContext.Error("error getting log entries from log service", "operation", "manager.LogServices()", "err", err)
-						}
-					}
-				}
-			}
-
-			managerLogContext.Info("collector scrape completed")
-		}
-		m.collectorScrapeStatus.WithLabelValues("manager").Set(float64(1))
-
+	managers, err := service.Managers()
+	if err != nil {
+		logContext.Error("error getting managers from service", "operation", "service.Managers()", "err", err)
+		return
 	}
 
+	wg := &sync.WaitGroup{}
+	for _, manager := range managers {
+		wg.Go(func() {
+			m.collectManager(ch, manager)
+		})
+	}
+
+	wg.Wait()
+	m.collectorScrapeStatus.WithLabelValues("manager").Set(float64(1))
+}
+
+func (c *Collector) collectManager(ch chan<- prometheus.Metric, manager *schemas.Manager) {
+	logContext := c.Log.With("Manager", manager.ID)
+	logContext.Info("collector scrape started")
+	// overall manager metrics
+	managerType := fmt.Sprint(manager.ManagerType)
+
+	ManagerLabelValues := []string{manager.ID, manager.Name, manager.Model, managerType}
+
+	if healthStatusValue, ok := common.ParseCommonStatusHealth(manager.Status.Health); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["manager_health_state"].Desc, prometheus.GaugeValue, healthStatusValue, ManagerLabelValues...)
+	}
+	if stateValue, ok := common.ParseCommonStatusState(manager.Status.State); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["manager_state"].Desc, prometheus.GaugeValue, stateValue, ManagerLabelValues...)
+	}
+	if powerStateValue, ok := common.ParseCommonPowerState(manager.PowerState); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["manager_power_state"].Desc, prometheus.GaugeValue, powerStateValue, ManagerLabelValues...)
+	}
+	if manager.FirmwareVersion != "" {
+		ch <- prometheus.MustNewConstMetric(metricMap["manager_firmware_info"].Desc, prometheus.GaugeValue, 1, append(ManagerLabelValues, manager.FirmwareVersion)...)
+	}
+
+	// process log services
+	if c.Ctx.CollectLogs {
+		logServices, err := manager.LogServices()
+		if err != nil {
+			logContext.Error("error getting log services from manager", "operation", "manager.LogServices()", "err", err)
+		} else if logServices == nil {
+			logContext.Info("no log services found", "operation", "manager.LogServices()")
+		} else {
+			wg := &sync.WaitGroup{}
+
+			for _, logService := range logServices {
+				wg.Go(func() {
+					if err = common.ParseLogService(ch, metricMap, c.Ctx, logContext, ManagerSubmanager, manager.ID, logService); err != nil {
+						logContext.Error("error getting log entries from log service", "operation", "manager.LogServices()", "err", err)
+					}
+				})
+			}
+
+			wg.Wait()
+		}
+	}
+
+	logContext.Info("collector scrape completed")
 }

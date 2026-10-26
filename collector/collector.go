@@ -46,7 +46,7 @@ func NewRedfishCollector(ctx *common.CollectionContext, logger *slog.Logger) *Re
 	var collectors map[string]prometheus.Collector
 	chassisCollector := chassis.NewChassisCollector(ctx, logger)
 	systemCollector := system.NewSystemCollector(ctx, logger)
-	managerCollector := manager.NewManagerCollector(ctx, logger)
+	managerCollector := manager.NewCollector(ctx, logger)
 
 	collectors = map[string]prometheus.Collector{"chassis": chassisCollector, "system": systemCollector, "manager": managerCollector}
 
