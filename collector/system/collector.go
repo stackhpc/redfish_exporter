@@ -248,7 +248,7 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 					wg10.Add(len(logServices))
 
 					for _, logService := range logServices {
-						if err = common.ParseLogService(ch, systemMetrics, s.Ctx, systemLogContext, SystemSubsystem, SystemID, logService, wg10); err != nil {
+						if err = common.ParseLogService(ch, systemMetrics, s.Ctx, systemLogContext, SystemSubsystem, SystemID, logService); err != nil {
 							systemLogContext.Error("error getting log entries from log service", "operation", "system.LogServices()", "err", err)
 						}
 					}

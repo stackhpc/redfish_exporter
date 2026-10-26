@@ -34,27 +34,22 @@ func AddToMetricMap(metricMap map[string]Metric, subsystem, name, help string, v
 	}
 }
 
-func ParseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx *CollectionContext, logger *slog.Logger, subsystem, collectorID string, logService *schemas.LogService, wg *sync.WaitGroup) (err error) {
-	defer wg.Done()
-	logServiceName := logService.Name
-	logServiceID := logService.ID
+func ParseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx *CollectionContext, logger *slog.Logger, subsystem, collectorID string, logService *schemas.LogService) (err error) {
 	logServiceEnabled := fmt.Sprint(logService.ServiceEnabled)
 	logServiceOverWritePolicy := string(logService.OverWritePolicy)
-	logServiceState := logService.Status.State
-	logServiceHealthState := logService.Status.Health
 
-	logServiceLabelValues := []string{collectorID, logServiceName, logServiceID, logServiceEnabled, logServiceOverWritePolicy}
+	logServiceLabelValues := []string{collectorID, logService.Name, logService.ID, logServiceEnabled, logServiceOverWritePolicy}
 
-	if logServiceStateValue, ok := ParseCommonStatusState(logServiceState); ok {
+	if logServiceStateValue, ok := ParseCommonStatusState(logService.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metrics[fmt.Sprintf("%s_%s", subsystem, "log_service_state")].Desc, prometheus.GaugeValue, logServiceStateValue, logServiceLabelValues...)
 	}
-	if logServiceHealthStateValue, ok := ParseCommonStatusHealth(logServiceHealthState); ok {
+	if logServiceHealthStateValue, ok := ParseCommonStatusHealth(logService.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metrics[fmt.Sprintf("%s_%s", subsystem, "log_service_health_state")].Desc, prometheus.GaugeValue, logServiceHealthStateValue, logServiceLabelValues...)
 	}
 	var (
 		logEntries []*schemas.LogEntry
 	)
-	logCount, ok := ctx.LogCount[logServiceID]
+	logCount, ok := ctx.LogCount[logService.ID]
 	if !ok {
 		logCount, ok = ctx.LogCount["DEFAULT"]
 		if !ok {
@@ -62,33 +57,36 @@ func ParseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx
 		}
 	}
 
-	logger.Info(fmt.Sprintf("logServiceID=%s, logcount=%d", logServiceID, logCount), "operation", "parseLogService")
+	logger.Info(fmt.Sprintf("logServiceID=%s, logcount=%d", logService.ID, logCount), "operation", "parseLogService")
 
 	if logCount > 0 {
-		//logEntries, err = logService.FilteredEntries(common.WithTop(logCount))
+		logEntries, err = logService.FilteredEntries(schemas.WithTop(logCount))
 	} else {
 		logEntries, err = logService.Entries()
 	}
 	if err != nil {
 		return
 	}
-	wg2 := &sync.WaitGroup{}
-	wg2.Add(len(logEntries))
+
+	wg := &sync.WaitGroup{}
 	processed := make(map[string]bool)
 	for _, logEntry := range logEntries {
 		_, exists := processed[logEntry.MessageID]
 		if exists {
-			wg2.Done()
 			continue
 		}
-		go ParseLogEntry(ch, metrics[fmt.Sprintf("%s_%s", subsystem, "log_entry_severity_state")].Desc, collectorID, logServiceName, logServiceID, logEntry, wg2)
+		wg.Go(func() {
+			ParseLogEntry(ch, metrics[fmt.Sprintf("%s_%s", subsystem, "log_entry_severity_state")].Desc, collectorID, logService.Name, logService.ID, logEntry)
+		})
 		processed[logEntry.MessageID] = true
 	}
-	return
+
+	wg.Wait()
+
+	return nil
 }
 
-func ParseLogEntry(ch chan<- prometheus.Metric, desc *prometheus.Desc, collectorID, logServiceName, logServiceID string, logEntry *schemas.LogEntry, wg *sync.WaitGroup) {
-	defer wg.Done()
+func ParseLogEntry(ch chan<- prometheus.Metric, desc *prometheus.Desc, collectorID, logServiceName, logServiceID string, logEntry *schemas.LogEntry) {
 	logEntryName := logEntry.Name
 	logEntryID := logEntry.ID
 	logEntryCode := string(logEntry.EntryCode)
