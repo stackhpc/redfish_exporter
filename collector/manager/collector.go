@@ -78,10 +78,66 @@ func (m *Collector) Collect(ch chan<- prometheus.Metric) {
 	service := m.Ctx.RedfishClient.Service
 
 	// get a list of managers from service
+<<<<<<< HEAD
 	managers, err := service.Managers()
 	if err != nil {
 		logContext.Error("error getting managers from service", "operation", "service.Managers()", "err", err)
 		return
+=======
+	if managers, err := service.Managers(); err != nil {
+		collectorLogContext.Error("error getting managers from service", "operation", "service.Managers()", "err", err)
+	} else {
+		for _, manager := range managers {
+			managerLogContext := collectorLogContext.With("Manager", manager.ID)
+			managerLogContext.Info("collector scrape started")
+			// overall manager metrics
+			ManagerID := manager.ID
+			managerName := manager.Name
+			managerModel := manager.Model
+			managerType := fmt.Sprint(manager.ManagerType)
+			managerPowerState := manager.PowerState
+			managerState := manager.Status.State
+			managerHealthState := manager.Status.Health
+
+			ManagerLabelValues := []string{ManagerID, managerName, managerModel, managerType}
+
+			if managerHealthStateValue, ok := common.ParseCommonStatusHealth(managerHealthState); ok {
+				ch <- prometheus.MustNewConstMetric(m.metrics["manager_health_state"].Desc, prometheus.GaugeValue, managerHealthStateValue, ManagerLabelValues...)
+			}
+			if managerStateValue, ok := common.ParseCommonStatusState(managerState); ok {
+				ch <- prometheus.MustNewConstMetric(m.metrics["manager_state"].Desc, prometheus.GaugeValue, managerStateValue, ManagerLabelValues...)
+			}
+			if managerPowerStateValue, ok := common.ParseCommonPowerState(managerPowerState); ok {
+				ch <- prometheus.MustNewConstMetric(m.metrics["manager_power_state"].Desc, prometheus.GaugeValue, managerPowerStateValue, ManagerLabelValues...)
+			}
+			if manager.FirmwareVersion != "" {
+				ch <- prometheus.MustNewConstMetric(m.metrics["manager_firmware_info"].Desc, prometheus.GaugeValue, 1, append(ManagerLabelValues, manager.FirmwareVersion)...)
+			}
+
+			// process log services
+			if collectLogs {
+				logServices, err := manager.LogServices()
+				if err != nil {
+					managerLogContext.Error("error getting log services from manager", "operation", "manager.LogServices()", "err", err)
+				} else if logServices == nil {
+					managerLogContext.Info("no log services found", "operation", "manager.LogServices()")
+				} else {
+					wg := &sync.WaitGroup{}
+					wg.Add(len(logServices))
+
+					for _, logService := range logServices {
+						if err = common.ParseLogService(ch, managerMetrics, m.Ctx, managerLogContext, ManagerSubmanager, ManagerID, logService); err != nil {
+							managerLogContext.Error("error getting log entries from log service", "operation", "manager.LogServices()", "err", err)
+						}
+					}
+				}
+			}
+
+			managerLogContext.Info("collector scrape completed")
+		}
+		m.collectorScrapeStatus.WithLabelValues("manager").Set(float64(1))
+
+>>>>>>> 17e76b1 (Tidy up chassis collector)
 	}
 
 	wg := &sync.WaitGroup{}
