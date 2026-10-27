@@ -15,7 +15,7 @@ var (
 	Subsystem = "chassis"
 
 	ChassisNetworkAdapterLabelNames = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id"}
-	ChassisNetworkPortLabelNames    = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id", "network_port", "network_port_id", "network_port_type", "network_port_speed", "network_port_connectiont_type", "network_physical_port_number"}
+	ChassisNetworkPortLabelNames    = []string{"resource", "chassis_id", "network_adapter", "network_adapter_id", "network_port", "network_port_id", "network_port_type", "network_port_connectiont_type", "network_physical_port_number"}
 
 	metricMap = createMetricMap()
 )
@@ -29,6 +29,8 @@ func createMetricMap() map[string]common.Metric {
 	common.AddToMetricMap(metrics, Subsystem, "network_port_state", fmt.Sprintf("chassis network port state,%s", common.StateHelp), ChassisNetworkPortLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "network_port_health_state", fmt.Sprintf("chassis network port health state,%s", common.HealthHelp), ChassisNetworkPortLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "network_port_link_state", fmt.Sprintf("chassis network port link state state,%s", common.PortLinkHelp), ChassisNetworkPortLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "network_port_link_speed_gbps", fmt.Sprintf("chassis network port link speed in gbps"), ChassisNetworkPortLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "network_port_link_speed_mbps", fmt.Sprintf("chassis network port link speed in mbps"), ChassisNetworkPortLabelNames)
 
 	return metrics
 }
@@ -66,17 +68,19 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	networkAdapters, err := c.chassis.NetworkAdapters()
 	if err != nil {
 		c.Log.Error("error getting network adapters data from chassis", "operation", "chassis.NetworkAdapters()", "err", err)
+		return
 	} else if networkAdapters == nil {
 		c.Log.Info("no network adapters data found", "operation", "chassis.NetworkAdapters()")
-	} else {
-		for _, networkAdapter := range networkAdapters {
-			c.Log.Debug("Found network adapter", "location", networkAdapter.ODataID)
-			wg.Go(func() {
-				if err = c.parseNetworkAdapter(ch, networkAdapter); err != nil {
-					c.Log.Error("error getting network ports from network adapter", "operation", "chassis.NetworkAdapters()", "err", err)
-				}
-			})
-		}
+		return
+	}
+
+	for _, networkAdapter := range networkAdapters {
+		c.Log.Debug("Found network adapter", "location", networkAdapter.ODataID)
+		wg.Go(func() {
+			if err = c.parseNetworkAdapter(ch, networkAdapter); err != nil {
+				c.Log.Error("error getting network ports from network adapter", "operation", "chassis.NetworkAdapters()", "err", err)
+			}
+		})
 	}
 
 	wg.Wait()
@@ -136,12 +140,14 @@ func parsePortLinkStatus(status schemas.PortLinkStatus) (float64, bool) {
 	return float64(0), false
 }
 
-
 func (c *Collector) parseNetworkPort(ch chan<- prometheus.Metric, networkPort *schemas.NetworkPort, networkAdapterName string, networkAdapterID string) {
 	networkPortLinkType := networkPort.ActiveLinkTechnology
-	networkPortLinkSpeed := fmt.Sprintf("%d Mbps", *networkPort.CurrentLinkSpeedMbps)
 	networkPortConnectionType := networkPort.FCPortConnectionType
-	chassisNetworkPortLabelValues := []string{"network_port", c.chassis.ID, networkAdapterName, networkAdapterID, networkPort.Name, networkPort.ID, string(networkPortLinkType), networkPortLinkSpeed, string(networkPortConnectionType), networkPort.PhysicalPortNumber}
+	chassisNetworkPortLabelValues := []string{"network_port", c.chassis.ID, networkAdapterName, networkAdapterID, networkPort.Name, networkPort.ID, string(networkPortLinkType), string(networkPortConnectionType), networkPort.PhysicalPortNumber}
+
+	if networkPort.CurrentLinkSpeedMbps != nil {
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_link_speed_mbps"].Desc, prometheus.GaugeValue, float64(*networkPort.CurrentLinkSpeedMbps), chassisNetworkPortLabelValues...)
+	}
 
 	if linkStatus, ok := parseNetworkPortLinkStatus(networkPort.LinkStatus); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_link_state"].Desc, prometheus.GaugeValue, linkStatus, chassisNetworkPortLabelValues...)
@@ -157,9 +163,12 @@ func (c *Collector) parseNetworkPort(ch chan<- prometheus.Metric, networkPort *s
 
 func (c *Collector) parsePort(ch chan<- prometheus.Metric, port *schemas.Port, networkAdapterName string, networkAdapterID string) {
 	networkPortLinkType := port.LinkNetworkTechnology
-	networkPortLinkSpeed := fmt.Sprintf("%f Gbps", *port.CurrentSpeedGbps)
 	networkPortConnectionType := port.FibreChannel.PortConnectionType
-	chassisNetworkPortLabelValues := []string{"network_port", c.chassis.ID, networkAdapterName, networkAdapterID, port.Name, port.ID, string(networkPortLinkType), networkPortLinkSpeed, string(networkPortConnectionType), port.Location.PartLocation.ServiceLabel}
+	chassisNetworkPortLabelValues := []string{"network_port", c.chassis.ID, networkAdapterName, networkAdapterID, port.Name, port.ID, string(networkPortLinkType), string(networkPortConnectionType), port.Location.PartLocation.ServiceLabel}
+
+	if port.CurrentSpeedGbps != nil {
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_link_speed_gbps"].Desc, prometheus.GaugeValue, *port.CurrentSpeedGbps, chassisNetworkPortLabelValues...)
+	}
 
 	if linkStatus, ok := parsePortLinkStatus(port.LinkStatus); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_link_state"].Desc, prometheus.GaugeValue, linkStatus, chassisNetworkPortLabelValues...)
@@ -168,6 +177,7 @@ func (c *Collector) parsePort(ch chan<- prometheus.Metric, port *schemas.Port, n
 	if portState, ok := common.ParseCommonStatusState(port.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_state"].Desc, prometheus.GaugeValue, portState, chassisNetworkPortLabelValues...)
 	}
+
 	if healthStatus, ok := common.ParseCommonStatusHealth(port.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_health_state"].Desc, prometheus.GaugeValue, healthStatus, chassisNetworkPortLabelValues...)
 	}

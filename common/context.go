@@ -48,6 +48,8 @@ func newRedfishClient(host string, username string, password string) (*gofish.AP
 		Username: username,
 		Password: password,
 		Insecure: true,
+		MaxConcurrentRequests: 1024,
+		ReuseConnections: true,
 	}
 	redfishClient, err := gofish.Connect(config)
 	if err != nil {
