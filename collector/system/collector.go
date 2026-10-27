@@ -11,6 +11,7 @@ import (
 	"github.com/stackhpc/redfish_exporter/collector/system/memory"
 	"github.com/stackhpc/redfish_exporter/collector/system/network_interfaces"
 	"github.com/stackhpc/redfish_exporter/collector/system/pcie_devices"
+	"github.com/stackhpc/redfish_exporter/collector/system/pcie_functions"
 	"github.com/stackhpc/redfish_exporter/collector/system/processors"
 	"github.com/stackhpc/redfish_exporter/common"
 	"github.com/stmcginnis/gofish/schemas"
@@ -25,7 +26,6 @@ var (
 	SystemDeviceLabelNames            = []string{"hostname", "resource", "device"}
 	SystemDriveLabelNames             = []string{"hostname", "resource", "drive", "drive_id"}
 	SystemStorageControllerLabelNames = []string{"hostname", "resource", "storage_controller", "storage_controller_id"}
-	SystemPCIeFunctionLabelNames      = []string{"hostname", "resource", "pcie_function_name", "pcie_function_id", "pci_function_deviceclass", "pci_function_type"}
 
 	SystemLogServiceLabelNames = []string{"system_id", "log_service", "log_service_id", "log_service_enabled", "log_service_overwrite_policy"}
 	SystemLogEntryLabelNames   = []string{"system_id", "log_service", "log_service_id", "log_entry", "log_entry_id", "log_entry_code", "log_entry_type", "log_entry_message_id", "log_entry_sensor_number", "log_entry_sensor_type"}
@@ -71,9 +71,6 @@ func createSystemMetricMap() map[string]common.Metric {
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_controller_state", fmt.Sprintf("system storage controller state,%s", common.StateHelp), SystemStorageControllerLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_controller_health_state", fmt.Sprintf("system storage controller health state,%s", common.HealthHelp), SystemStorageControllerLabelNames)
-
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_state", fmt.Sprintf("system pcie function state,%s", common.StateHelp), SystemPCIeFunctionLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_health_state", fmt.Sprintf("system pcie device function state,%s", common.HealthHelp), SystemPCIeFunctionLabelNames)
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_state", fmt.Sprintf("system log service state,%s", common.StateHelp), SystemLogServiceLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_health_state", fmt.Sprintf("system log service health state,%s", common.HealthHelp), SystemLogServiceLabelNames)
@@ -174,7 +171,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			wg3 := &sync.WaitGroup{}  // storage/volumes
 			wg4 := &sync.WaitGroup{}  // storage/drives
 			wg8 := &sync.WaitGroup{}  // simple storage
-			wg9 := &sync.WaitGroup{}  // pcie functions
 			wg10 := &sync.WaitGroup{} // log services
 
 			wg := &sync.WaitGroup{}
@@ -213,7 +209,8 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 
 			if !slices.Contains(disabledMetrics, "pcie_functions") {
-				processPcieFunctions(system, systemLogContext, wg9, ch, systemHostName)
+				collector := pcie_functions.NewCollector(s.Ctx, s.Log, system)
+				wg.Go(func() { collector.Collect(ch) })
 			}
 
 			// process log services
@@ -237,7 +234,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			wg3.Wait()
 			wg4.Wait()
 			wg8.Wait()
-			wg9.Wait()
 			wg10.Wait()
 
 			wg.Wait()
@@ -318,20 +314,6 @@ func processStorage(system *schemas.ComputerSystem, systemLogContext *slog.Logge
 	}
 }
 
-func processPcieFunctions(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg9 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
-	pcieFunctions, err := system.PCIeFunctions()
-	if err != nil {
-		systemLogContext.Error("error getting PCI-E device function data from system", "operation", "system.PCIEFunctions()", "err", err)
-	} else if pcieFunctions == nil {
-		systemLogContext.Info("no PCI-E device function data found", "operation", "system.PCIeFunctions()")
-	} else {
-		wg9.Add(len(pcieFunctions))
-		for _, pcieFunction := range pcieFunctions {
-			go parsePcieFunction(ch, systemHostName, pcieFunction, wg9)
-		}
-	}
-}
-
 func processSimpleStorage(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg8 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	simpleStorages, err := system.SimpleStorage()
 	if err != nil {
@@ -406,25 +388,5 @@ func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schem
 	}
 	if drive.CapacityBytes != nil {
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_capacity"].Desc, prometheus.GaugeValue, float64(*drive.CapacityBytes), systemdriveLabelValues...)
-	}
-}
-
-func parsePcieFunction(ch chan<- prometheus.Metric, systemHostName string, pcieFunction *schemas.PCIeFunction, wg *sync.WaitGroup) {
-	defer wg.Done()
-	pcieFunctionName := pcieFunction.Name
-	pcieFunctionID := fmt.Sprint(pcieFunction.ID)
-	pciFunctionDeviceclass := fmt.Sprint(pcieFunction.DeviceClass)
-	pciFunctionType := fmt.Sprint(pcieFunction.FunctionType)
-	pciFunctionState := pcieFunction.Status.State
-	pciFunctionHealthState := pcieFunction.Status.Health
-
-	systemPCIeFunctionLabelLabelValues := []string{systemHostName, "pcie_function", pcieFunctionName, pcieFunctionID, pciFunctionDeviceclass, pciFunctionType}
-
-	if pciFunctionStateValue, ok := common.ParseCommonStatusState(pciFunctionState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_function_state"].Desc, prometheus.GaugeValue, pciFunctionStateValue, systemPCIeFunctionLabelLabelValues...)
-	}
-
-	if pciFunctionHealthStateValue, ok := common.ParseCommonStatusHealth(pciFunctionHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_function_health_state"].Desc, prometheus.GaugeValue, pciFunctionHealthStateValue, systemPCIeFunctionLabelLabelValues...)
 	}
 }
