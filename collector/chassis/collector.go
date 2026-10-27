@@ -11,6 +11,7 @@ import (
 
 	"github.com/stackhpc/redfish_exporter/collector/chassis/network_adapters"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/power"
+	"github.com/stackhpc/redfish_exporter/collector/chassis/power_subsystem"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/thermal"
 	"github.com/stackhpc/redfish_exporter/common"
 )
@@ -125,8 +126,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		thermal := thermal.NewCollector(c.Ctx, c.Log, chassis)
 		wg.Go(func() { thermal.Collect(ch) })
 
+		// Power() was deprecated in Redfish v1.15.0
 		power := power.NewCollector(c.Ctx, c.Log, chassis)
 		wg.Go(func() { power.Collect(ch) })
+
+		// It was replaced with PowerSubsystem()
+		power_subsystem := power_subsystem.NewCollector(c.Ctx, c.Log, chassis)
+		wg.Go(func() { power_subsystem.Collect(ch) })
 
 		network_adapters := network_adapters.NewCollector(c.Ctx, c.Log, chassis)
 		wg.Go(func() { network_adapters.Collect(ch) })
