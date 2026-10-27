@@ -165,13 +165,9 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_health_state"].Desc, prometheus.GaugeValue, systemTotalMemoryHealthStateValue, systemLabelValues...)
 			}
 
-			// get system OdataID
-			//systemOdataID := system.ODataID
-
 			wg3 := &sync.WaitGroup{}  // storage/volumes
 			wg4 := &sync.WaitGroup{}  // storage/drives
 			wg8 := &sync.WaitGroup{}  // simple storage
-			wg10 := &sync.WaitGroup{} // log services
 
 			wg := &sync.WaitGroup{}
 
@@ -215,26 +211,12 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 
 			// process log services
 			if collectLogs {
-				logServices, err := system.LogServices()
-				if err != nil {
-					systemLogContext.Error("error getting log services from system", "operation", "system.LogServices()", "err", err)
-				} else if logServices == nil {
-					systemLogContext.Info("no log services found", "operation", "system.LogServices()")
-				} else {
-					wg10.Add(len(logServices))
-
-					for _, logService := range logServices {
-						if err = common.ParseLogService(ch, systemMetrics, s.Ctx, systemLogContext, SystemSubsystem, SystemID, logService); err != nil {
-							systemLogContext.Error("error getting log entries from log service", "operation", "system.LogServices()", "err", err)
-						}
-					}
-				}
+				wg.Go(func() { s.collectLogs(ch, system) })
 			}
 
 			wg3.Wait()
 			wg4.Wait()
 			wg8.Wait()
-			wg10.Wait()
 
 			wg.Wait()
 
@@ -242,6 +224,28 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 		}
 		s.collectorScrapeStatus.WithLabelValues("system").Set(float64(1))
 	}
+}
+
+func (c* SystemCollector) collectLogs(ch chan<- prometheus.Metric, system *schemas.ComputerSystem) {
+	logServices, err := system.LogServices()
+	if err != nil {
+		c.Log.Error("error getting log services from system", "operation", "system.LogServices()", "err", err)
+		return
+	} else if logServices == nil {
+		c.Log.Info("no log services found", "operation", "system.LogServices()")
+		return
+	}
+
+	wg := &sync.WaitGroup{}
+	for _, logService := range logServices {
+		wg.Go(func() {
+			if err = common.ParseLogService(ch, systemMetrics, c.Ctx, c.Log.With("log_service", logService.ID), SystemSubsystem, system.ID, logService); err != nil {
+				c.Log.Error("error getting log entries from log service", "operation", "chassis.LogServices()", "err", err)
+			}
+		})
+	}
+
+	wg.Wait()
 }
 
 func processStorage(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg3 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string, wg4 *sync.WaitGroup) {
