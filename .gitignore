@@ -31,3 +31,5 @@ config.yml
 # Commit all Helm chart files
 !helm/**
 helm/*.lock
+
+redfish_exporter_cpu_profile

@@ -78,6 +78,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}
 	if thermal == nil {
 		c.Log.Info("no thermal data found", "operation", "chassis.Thermal()")
+		return
 	}
 
 	// Process temperature sensors
