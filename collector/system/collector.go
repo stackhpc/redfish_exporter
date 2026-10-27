@@ -13,6 +13,7 @@ import (
 	"github.com/stackhpc/redfish_exporter/collector/system/pcie_devices"
 	"github.com/stackhpc/redfish_exporter/collector/system/pcie_functions"
 	"github.com/stackhpc/redfish_exporter/collector/system/processors"
+	"github.com/stackhpc/redfish_exporter/collector/system/storage"
 	"github.com/stackhpc/redfish_exporter/common"
 	"github.com/stmcginnis/gofish/schemas"
 )
@@ -22,7 +23,6 @@ var (
 	SystemSubsystem                   = "system"
 	SystemLabelNames                  = []string{"hostname", "resource", "system_id"}
 	SystemBIOSLabelNames              = append(slices.Clone(SystemLabelNames), "bios_version")
-	SystemVolumeLabelNames            = []string{"hostname", "resource", "volume", "volume_id"}
 	SystemDeviceLabelNames            = []string{"hostname", "resource", "device"}
 	SystemDriveLabelNames             = []string{"hostname", "resource", "drive", "drive_id"}
 	SystemStorageControllerLabelNames = []string{"hostname", "resource", "storage_controller", "storage_controller_id"}
@@ -60,17 +60,6 @@ func createSystemMetricMap() map[string]common.Metric {
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "simple_storage_device_state", fmt.Sprintf("system simple storage device state,%s", common.StateHelp), SystemDeviceLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "simple_storage_device_health_state", fmt.Sprintf("system simple storage device health state,%s", common.HealthHelp), SystemDeviceLabelNames)
-
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_volume_state", fmt.Sprintf("system storage volume state,%s", common.StateHelp), SystemVolumeLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_volume_health_state", fmt.Sprintf("system storage volume health state,%s", common.HealthHelp), SystemVolumeLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_volume_capacity", "system storage volume capacity, Bytes", SystemVolumeLabelNames)
-
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_drive_state", fmt.Sprintf("system storage drive state,%s", common.StateHelp), SystemDriveLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_drive_health_state", fmt.Sprintf("system storage drive health state,%s", common.HealthHelp), SystemDriveLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_drive_capacity", "system storage drive capacity, Bytes", SystemDriveLabelNames)
-
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_controller_state", fmt.Sprintf("system storage controller state,%s", common.StateHelp), SystemStorageControllerLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_controller_health_state", fmt.Sprintf("system storage controller health state,%s", common.HealthHelp), SystemStorageControllerLabelNames)
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_state", fmt.Sprintf("system log service state,%s", common.StateHelp), SystemLogServiceLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_health_state", fmt.Sprintf("system log service health state,%s", common.HealthHelp), SystemLogServiceLabelNames)
@@ -165,8 +154,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_health_state"].Desc, prometheus.GaugeValue, systemTotalMemoryHealthStateValue, systemLabelValues...)
 			}
 
-			wg3 := &sync.WaitGroup{}  // storage/volumes
-			wg4 := &sync.WaitGroup{}  // storage/drives
 			wg8 := &sync.WaitGroup{}  // simple storage
 
 			wg := &sync.WaitGroup{}
@@ -182,7 +169,8 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 
 			if !slices.Contains(disabledMetrics, "storage") {
-				processStorage(system, systemLogContext, wg3, ch, systemHostName, wg4)
+				collector := storage.NewCollector(s.Ctx, s.Log, system)
+				wg.Go(func() { collector.Collect(ch) })
 			}
 
 			if !slices.Contains(disabledMetrics, "pcie_devices") {
@@ -214,8 +202,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 				wg.Go(func() { s.collectLogs(ch, system) })
 			}
 
-			wg3.Wait()
-			wg4.Wait()
 			wg8.Wait()
 
 			wg.Wait()
