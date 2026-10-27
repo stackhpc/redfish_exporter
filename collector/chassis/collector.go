@@ -133,6 +133,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 		// process log services
 		if c.Ctx.CollectLogs {
+			wg.Go(func() { c.collectLogs(ch, chassis) })
 		}
 	}
 
@@ -141,21 +142,21 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.collectorScrapeStatus.WithLabelValues("chassis").Set(float64(1))
 }
 
-func collectLogs(ch chan<- prometheus.Metric, chassis schemas.Chassis, logContext *slog.Logger, ctx *common.CollectionContext) {
+func (c* Collector) collectLogs(ch chan<- prometheus.Metric, chassis *schemas.Chassis) {
 	logServices, err := chassis.LogServices()
 	if err != nil {
-		logContext.Error("error getting log services from chassis", "operation", "chassis.LogServices()", "err", err)
+		c.Log.Error("error getting log services from chassis", "operation", "chassis.LogServices()", "err", err)
 		return
 	} else if logServices == nil {
-		logContext.Info("no log services found", "operation", "chassis.LogServices()")
+		c.Log.Info("no log services found", "operation", "chassis.LogServices()")
 		return
 	}
 
 	wg := &sync.WaitGroup{}
 	for _, logService := range logServices {
 		wg.Go(func() {
-			if err = common.ParseLogService(ch, chassisMetrics, ctx, logContext, ChassisSubsystem, chassis.ID, logService); err != nil {
-				logContext.Error("error getting log entries from log service", "operation", "chassis.LogServices()", "err", err)
+			if err = common.ParseLogService(ch, chassisMetrics, c.Ctx, c.Log.With("log_service", logService.ID), ChassisSubsystem, chassis.ID, logService); err != nil {
+				c.Log.Error("error getting log entries from log service", "operation", "chassis.LogServices()", "err", err)
 			}
 		})
 	}
