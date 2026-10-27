@@ -29,6 +29,12 @@ func createMetricMap() map[string]common.Metric {
 	return metrics
 }
 
+func Describe(ch chan<- *prometheus.Desc) {
+	for _, metric := range metricMap {
+		ch <- metric.Desc
+	}
+}
+
 func ParsePowerSupply(ch chan<- prometheus.Metric, chassisID string, powerSupply schemas.PowerSupply) {
 	labelValues := []string{"power_supply", chassisID, powerSupply.Name, powerSupply.MemberID}
 	if chassisPowerInfoPowerSupplyStateValue, ok := common.ParseCommonStatusState(powerSupply.Status.State); ok {
