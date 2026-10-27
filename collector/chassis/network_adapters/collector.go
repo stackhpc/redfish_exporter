@@ -30,7 +30,6 @@ func createMetricMap() map[string]common.Metric {
 	common.AddToMetricMap(metrics, Subsystem, "network_port_health_state", fmt.Sprintf("chassis network port health state,%s", common.HealthHelp), ChassisNetworkPortLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "network_port_link_state", fmt.Sprintf("chassis network port link state state,%s", common.PortLinkHelp), ChassisNetworkPortLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "network_port_link_speed_gbps", fmt.Sprintf("chassis network port link speed in gbps"), ChassisNetworkPortLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "network_port_link_speed_mbps", fmt.Sprintf("chassis network port link speed in mbps"), ChassisNetworkPortLabelNames)
 
 	return metrics
 }
@@ -146,7 +145,7 @@ func (c *Collector) parseNetworkPort(ch chan<- prometheus.Metric, networkPort *s
 	chassisNetworkPortLabelValues := []string{"network_port", c.chassis.ID, networkAdapterName, networkAdapterID, networkPort.Name, networkPort.ID, string(networkPortLinkType), string(networkPortConnectionType), networkPort.PhysicalPortNumber}
 
 	if networkPort.CurrentLinkSpeedMbps != nil {
-		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_link_speed_mbps"].Desc, prometheus.GaugeValue, float64(*networkPort.CurrentLinkSpeedMbps), chassisNetworkPortLabelValues...)
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_link_speed_gbps"].Desc, prometheus.GaugeValue, float64(*networkPort.CurrentLinkSpeedMbps) / 1000.0, chassisNetworkPortLabelValues...)
 	}
 
 	if linkStatus, ok := parseNetworkPortLinkStatus(networkPort.LinkStatus); ok {
