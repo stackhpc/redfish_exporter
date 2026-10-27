@@ -53,6 +53,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 	for _, metric := range c.metrics {
 		ch <- metric.Desc
 	}
+	power_common.Describe(ch)
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
