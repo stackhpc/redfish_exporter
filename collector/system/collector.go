@@ -19,10 +19,9 @@ import (
 	"github.com/stmcginnis/gofish/schemas"
 )
 
-// SystemSubsystem is the system subsystem
 var (
-	SystemSubsystem                   = "system"
-	SystemLabelNames                  = []string{"hostname", "resource", "system_id"}
+	Subsystem  = "system"
+	SystemLabelNames = []string{"hostname", "resource", "system_id"}
 	SystemBIOSLabelNames              = append(slices.Clone(SystemLabelNames), "bios_version")
 
 	SystemLogServiceLabelNames = []string{"system_id", "log_service", "log_service_id", "log_service_enabled", "log_service_overwrite_policy"}
@@ -31,8 +30,8 @@ var (
 	systemMetrics = createSystemMetricMap()
 )
 
-// SystemCollector implements the prometheus.Collector.
-type SystemCollector struct {
+// Collector implements the prometheus.Collector.
+type Collector struct {
 	Ctx     *common.CollectionContext
 	metrics map[string]common.Metric
 	prometheus.Collector
@@ -43,29 +42,29 @@ type SystemCollector struct {
 func createSystemMetricMap() map[string]common.Metric {
 	systemMetrics := make(map[string]common.Metric)
 
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "state", fmt.Sprintf("system state,%s", common.StateHelp), SystemLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "health_state", fmt.Sprintf("system health,%s", common.HealthHelp), SystemLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "power_state", "system power state", SystemLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "bios_info", "system BIOS version, value is always 1", SystemBIOSLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "state", fmt.Sprintf("system state,%s", common.StateHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "health_state", fmt.Sprintf("system health,%s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "power_state", "system power state", SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "bios_info", "system BIOS version, value is always 1", SystemBIOSLabelNames)
 
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_memory_state", fmt.Sprintf("system overall memory state,%s", common.StateHelp), SystemLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_memory_health_state", fmt.Sprintf("system overall memory health,%s", common.HealthHelp), SystemLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_memory_size", "system total memory size, GiB", SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "total_memory_state", fmt.Sprintf("system overall memory state,%s", common.StateHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "total_memory_health_state", fmt.Sprintf("system overall memory health,%s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "total_memory_size", "system total memory size, GiB", SystemLabelNames)
 
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_state", fmt.Sprintf("system overall processor state,%s", common.StateHelp), SystemLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_health_state", fmt.Sprintf("system overall processor health,%s", common.HealthHelp), SystemLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_count", "system total processor count", SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "total_processor_state", fmt.Sprintf("system overall processor state,%s", common.StateHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "total_processor_health_state", fmt.Sprintf("system overall processor health,%s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "total_processor_count", "system total processor count", SystemLabelNames)
 
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_state", fmt.Sprintf("system log service state,%s", common.StateHelp), SystemLogServiceLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_health_state", fmt.Sprintf("system log service health state,%s", common.HealthHelp), SystemLogServiceLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_entry_severity_state", fmt.Sprintf("system log entry severity state,%s", common.SeverityHelp), SystemLogEntryLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "log_service_state", fmt.Sprintf("system log service state,%s", common.StateHelp), SystemLogServiceLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "log_service_health_state", fmt.Sprintf("system log service health state,%s", common.HealthHelp), SystemLogServiceLabelNames)
+	common.AddToMetricMap(systemMetrics, Subsystem, "log_entry_severity_state", fmt.Sprintf("system log entry severity state,%s", common.SeverityHelp), SystemLogEntryLabelNames)
 
 	return systemMetrics
 }
 
-// NewSystemCollector returns a collector that collecting memory statistics
-func NewSystemCollector(ctx *common.CollectionContext, logger *slog.Logger) *SystemCollector {
-	return &SystemCollector{
+// NewCollector returns a collector that collecting memory statistics
+func NewCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector {
+	return &Collector{
 		metrics: systemMetrics,
 		Ctx:     ctx,
 		Log: logger.With(
@@ -83,128 +82,119 @@ func NewSystemCollector(ctx *common.CollectionContext, logger *slog.Logger) *Sys
 }
 
 // Describe implements prometheus.Collector.
-func (s *SystemCollector) Describe(ch chan<- *prometheus.Desc) {
-	for _, metric := range s.metrics {
+func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
+	for _, metric := range c.metrics {
 		ch <- metric.Desc
 	}
-	s.collectorScrapeStatus.Describe(ch)
+	c.collectorScrapeStatus.Describe(ch)
 }
 
 // Collect implements prometheus.Collector.
-func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
-	collectorLogContext := s.Log
-	disabledMetrics := s.Ctx.DisabledMetrics
-	collectLogs := s.Ctx.CollectLogs
-	//get service
-	service := s.Ctx.RedfishClient.Service
+func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	disabledMetrics := c.Ctx.DisabledMetrics
+	service := c.Ctx.RedfishClient.Service
 
-	// get a list of systems from service
-	if systems, err := service.Systems(); err != nil {
-		collectorLogContext.Error("error getting systems from service", "operation", "service.Systems()", "err", err)
-	} else {
-		for _, system := range systems {
-			systemLogContext := collectorLogContext.With("System", system.ID)
-			systemLogContext.Info("collector scrape started")
-			// overall system metrics
+	systems, err := service.Systems()
+	if err != nil {
+		c.Log.Error("error getting systems from service", "operation", "service.Systems()", "err", err)
+		return
+	}
 
-			SystemID := system.ID
-			systemHostName := system.HostName
-			systemPowerState := system.PowerState
-			systemState := system.Status.State
-			systemHealthState := system.Status.Health
-			systemTotalProcessorsState := system.ProcessorSummary.Status.State
-			systemTotalProcessorsHealthState := system.ProcessorSummary.Status.Health
-			systemTotalMemoryState := system.MemorySummary.Status.State
-			systemTotalMemoryHealthState := system.MemorySummary.Status.Health
+	for _, system := range systems {
+		systemLogContext := c.Log.With("System", system.ID)
+		systemLogContext.Info("collector scrape started")
 
-			systemLabelValues := []string{systemHostName, "system", SystemID}
-			if systemHealthStateValue, ok := common.ParseCommonStatusHealth(systemHealthState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_health_state"].Desc, prometheus.GaugeValue, systemHealthStateValue, systemLabelValues...)
-			}
-			if systemStateValue, ok := common.ParseCommonStatusState(systemState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_state"].Desc, prometheus.GaugeValue, systemStateValue, systemLabelValues...)
-			}
-			if systemPowerStateValue, ok := common.ParseCommonPowerState(systemPowerState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_power_state"].Desc, prometheus.GaugeValue, systemPowerStateValue, systemLabelValues...)
-			}
-			if system.BiosVersion != "" {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_bios_info"].Desc, prometheus.GaugeValue, 1, append(systemLabelValues, system.BiosVersion)...)
-			}
-			if systemTotalProcessorsStateValue, ok := common.ParseCommonStatusState(systemTotalProcessorsState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_state"].Desc, prometheus.GaugeValue, systemTotalProcessorsStateValue, systemLabelValues...)
-				if system.ProcessorSummary.Count != nil {
-					ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_count"].Desc, prometheus.GaugeValue, float64(*system.ProcessorSummary.Count), systemLabelValues...)
-				}
-			}
-			if systemTotalProcessorsHealthStateValue, ok := common.ParseCommonStatusHealth(systemTotalProcessorsHealthState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_processor_health_state"].Desc, prometheus.GaugeValue, systemTotalProcessorsHealthStateValue, systemLabelValues...)
-			}
-			if systemTotalMemoryStateValue, ok := common.ParseCommonStatusState(systemTotalMemoryState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_state"].Desc, prometheus.GaugeValue, systemTotalMemoryStateValue, systemLabelValues...)
-				if system.MemorySummary.TotalSystemMemoryGiB != nil {
-					ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_size"].Desc, prometheus.GaugeValue, float64(*system.MemorySummary.TotalSystemMemoryGiB), systemLabelValues...)
-				}
-			}
-			if systemTotalMemoryHealthStateValue, ok := common.ParseCommonStatusHealth(systemTotalMemoryHealthState); ok {
-				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_health_state"].Desc, prometheus.GaugeValue, systemTotalMemoryHealthStateValue, systemLabelValues...)
-			}
+		wg := &sync.WaitGroup{}
 
-			wg := &sync.WaitGroup{}
+		wg.Go(func() { c.collectOverallMetrics(ch, system) })
 
-			if !slices.Contains(disabledMetrics, "memory") {
-				collector := memory.NewCollector(s.Ctx, s.Log, system)
-				wg.Go(func() { collector.Collect(ch) })
-			}
-
-			if !slices.Contains(disabledMetrics, "processor") {
-				collector := processors.NewCollector(s.Ctx, s.Log, system)
-				wg.Go(func() { collector.Collect(ch) })
-			}
-
-			if !slices.Contains(disabledMetrics, "storage") {
-				collector := storage.NewCollector(s.Ctx, s.Log, system)
-				wg.Go(func() { collector.Collect(ch) })
-			}
-
-			if !slices.Contains(disabledMetrics, "pcie_devices") {
-				collector := pcie_devices.NewCollector(s.Ctx, s.Log, system)
-				wg.Go(func() { collector.Collect(ch) })
-			}
-
-			if !slices.Contains(disabledMetrics, "network_interfaces") {
-				collector := network_interfaces.NewCollector(s.Ctx, s.Log, system)
-				wg.Go(func() { collector.Collect(ch) })
-			}
-
-			if !slices.Contains(disabledMetrics, "ethernet_interfaces") {
-				collector := ethernet_interfaces.NewCollector(s.Ctx, s.Log, system)
-				wg.Go(func() { collector.Collect(ch) })
-			}
-
-			if !slices.Contains(disabledMetrics, "simple_storage") {
-				collector := simple_storage.NewCollector(s.Ctx, s.Log, system)
-				wg.Go(func() { collector.Collect(ch) })
-			}
-
-			if !slices.Contains(disabledMetrics, "pcie_functions") {
-				collector := pcie_functions.NewCollector(s.Ctx, s.Log, system)
-				wg.Go(func() { collector.Collect(ch) })
-			}
-
-			// process log services
-			if collectLogs {
-				wg.Go(func() { s.collectLogs(ch, system) })
-			}
-
-			wg.Wait()
-
-			systemLogContext.Info("collector scrape completed")
+		if !slices.Contains(disabledMetrics, "memory") {
+			collector := memory.NewCollector(c.Ctx, c.Log, system)
+			wg.Go(func() { collector.Collect(ch) })
 		}
-		s.collectorScrapeStatus.WithLabelValues("system").Set(float64(1))
+
+		if !slices.Contains(disabledMetrics, "processor") {
+			collector := processors.NewCollector(c.Ctx, c.Log, system)
+			wg.Go(func() { collector.Collect(ch) })
+		}
+
+		if !slices.Contains(disabledMetrics, "storage") {
+			collector := storage.NewCollector(c.Ctx, c.Log, system)
+			wg.Go(func() { collector.Collect(ch) })
+		}
+
+		if !slices.Contains(disabledMetrics, "pcie_devices") {
+			collector := pcie_devices.NewCollector(c.Ctx, c.Log, system)
+			wg.Go(func() { collector.Collect(ch) })
+		}
+
+		if !slices.Contains(disabledMetrics, "network_interfaces") {
+			collector := network_interfaces.NewCollector(c.Ctx, c.Log, system)
+			wg.Go(func() { collector.Collect(ch) })
+		}
+
+		if !slices.Contains(disabledMetrics, "ethernet_interfaces") {
+			collector := ethernet_interfaces.NewCollector(c.Ctx, c.Log, system)
+			wg.Go(func() { collector.Collect(ch) })
+		}
+
+		if !slices.Contains(disabledMetrics, "simple_storage") {
+			collector := simple_storage.NewCollector(c.Ctx, c.Log, system)
+			wg.Go(func() { collector.Collect(ch) })
+		}
+
+		if !slices.Contains(disabledMetrics, "pcie_functions") {
+			collector := pcie_functions.NewCollector(c.Ctx, c.Log, system)
+			wg.Go(func() { collector.Collect(ch) })
+		}
+
+		// process log services
+		if c.Ctx.CollectLogs {
+			wg.Go(func() { c.collectLogs(ch, system) })
+		}
+
+		wg.Wait()
+
+		systemLogContext.Info("collector scrape completed")
+	}
+	c.collectorScrapeStatus.WithLabelValues("system").Set(float64(1))
+}
+
+func (c *Collector) collectOverallMetrics(ch chan<- prometheus.Metric, system *schemas.ComputerSystem) {
+	systemLabelValues := []string{system.HostName, "system", system.ID}
+	if healthStatusValue, ok := common.ParseCommonStatusHealth(system.Status.Health); ok {
+		ch <- prometheus.MustNewConstMetric(c.metrics["system_health_state"].Desc, prometheus.GaugeValue, healthStatusValue, systemLabelValues...)
+	}
+	if stateValue, ok := common.ParseCommonStatusState(system.Status.State); ok {
+		ch <- prometheus.MustNewConstMetric(c.metrics["system_state"].Desc, prometheus.GaugeValue, stateValue, systemLabelValues...)
+	}
+	if powerStateValue, ok := common.ParseCommonPowerState(system.PowerState); ok {
+		ch <- prometheus.MustNewConstMetric(c.metrics["system_power_state"].Desc, prometheus.GaugeValue, powerStateValue, systemLabelValues...)
+	}
+	if system.BiosVersion != "" {
+		ch <- prometheus.MustNewConstMetric(c.metrics["system_bios_info"].Desc, prometheus.GaugeValue, 1, append(systemLabelValues, system.BiosVersion)...)
+	}
+	if totalProcessorsStateValue, ok := common.ParseCommonStatusState(system.ProcessorSummary.Status.State); ok {
+		ch <- prometheus.MustNewConstMetric(c.metrics["system_total_processor_state"].Desc, prometheus.GaugeValue, totalProcessorsStateValue, systemLabelValues...)
+		if system.ProcessorSummary.Count != nil {
+			ch <- prometheus.MustNewConstMetric(c.metrics["system_total_processor_count"].Desc, prometheus.GaugeValue, float64(*system.ProcessorSummary.Count), systemLabelValues...)
+		}
+	}
+	if totalProcessorsHealthStatusValue, ok := common.ParseCommonStatusHealth(system.ProcessorSummary.Status.Health); ok {
+		ch <- prometheus.MustNewConstMetric(c.metrics["system_total_processor_health_state"].Desc, prometheus.GaugeValue, totalProcessorsHealthStatusValue, systemLabelValues...)
+	}
+	if totalMemoryStateValue, ok := common.ParseCommonStatusState(system.MemorySummary.Status.State); ok {
+		ch <- prometheus.MustNewConstMetric(c.metrics["system_total_memory_state"].Desc, prometheus.GaugeValue, totalMemoryStateValue, systemLabelValues...)
+		if system.MemorySummary.TotalSystemMemoryGiB != nil {
+			ch <- prometheus.MustNewConstMetric(c.metrics["system_total_memory_size"].Desc, prometheus.GaugeValue, float64(*system.MemorySummary.TotalSystemMemoryGiB), systemLabelValues...)
+		}
+	}
+	if totalMemoryHealthStatusValue, ok := common.ParseCommonStatusHealth(system.MemorySummary.Status.Health); ok {
+		ch <- prometheus.MustNewConstMetric(c.metrics["system_total_memory_health_state"].Desc, prometheus.GaugeValue, totalMemoryHealthStatusValue, systemLabelValues...)
 	}
 }
 
-func (c* SystemCollector) collectLogs(ch chan<- prometheus.Metric, system *schemas.ComputerSystem) {
+func (c *Collector) collectLogs(ch chan<- prometheus.Metric, system *schemas.ComputerSystem) {
 	logServices, err := system.LogServices()
 	if err != nil {
 		c.Log.Error("error getting log services from system", "operation", "system.LogServices()", "err", err)
@@ -217,7 +207,7 @@ func (c* SystemCollector) collectLogs(ch chan<- prometheus.Metric, system *schem
 	wg := &sync.WaitGroup{}
 	for _, logService := range logServices {
 		wg.Go(func() {
-			if err = common.ParseLogService(ch, systemMetrics, c.Ctx, c.Log.With("log_service", logService.ID), SystemSubsystem, system.ID, logService); err != nil {
+			if err = common.ParseLogService(ch, systemMetrics, c.Ctx, c.Log.With("log_service", logService.ID), Subsystem, system.ID, logService); err != nil {
 				c.Log.Error("error getting log entries from log service", "operation", "chassis.LogServices()", "err", err)
 			}
 		})
