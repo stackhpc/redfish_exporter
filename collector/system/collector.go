@@ -9,6 +9,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/collector/system/memory"
+	"github.com/stackhpc/redfish_exporter/collector/system/pcie_devices"
 	"github.com/stackhpc/redfish_exporter/collector/system/processors"
 	"github.com/stackhpc/redfish_exporter/common"
 	"github.com/stmcginnis/gofish/schemas"
@@ -23,7 +24,6 @@ var (
 	SystemDeviceLabelNames            = []string{"hostname", "resource", "device"}
 	SystemDriveLabelNames             = []string{"hostname", "resource", "drive", "drive_id"}
 	SystemStorageControllerLabelNames = []string{"hostname", "resource", "storage_controller", "storage_controller_id"}
-	SystemPCIeDeviceLabelNames        = []string{"hostname", "resource", "pcie_device", "pcie_device_id", "pcie_device_partnumber", "pcie_device_type", "pcie_serial_number"}
 	SystemNetworkInterfaceLabelNames  = []string{"hostname", "resource", "network_interface", "network_interface_id"}
 	SystemEthernetInterfaceLabelNames = []string{"hostname", "resource", "ethernet_interface", "ethernet_interface_id", "ethernet_interface_speed"}
 	SystemPCIeFunctionLabelNames      = []string{"hostname", "resource", "pcie_function_name", "pcie_function_id", "pci_function_deviceclass", "pci_function_type"}
@@ -72,9 +72,6 @@ func createSystemMetricMap() map[string]common.Metric {
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_controller_state", fmt.Sprintf("system storage controller state,%s", common.StateHelp), SystemStorageControllerLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "storage_controller_health_state", fmt.Sprintf("system storage controller health state,%s", common.HealthHelp), SystemStorageControllerLabelNames)
-
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_device_state", fmt.Sprintf("system pcie device state,%s", common.StateHelp), SystemPCIeDeviceLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_device_health_state", fmt.Sprintf("system pcie device health state,%s", common.HealthHelp), SystemPCIeDeviceLabelNames)
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_state", fmt.Sprintf("system pcie function state,%s", common.StateHelp), SystemPCIeFunctionLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_health_state", fmt.Sprintf("system pcie device function state,%s", common.HealthHelp), SystemPCIeFunctionLabelNames)
@@ -185,7 +182,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 
 			wg3 := &sync.WaitGroup{}  // storage/volumes
 			wg4 := &sync.WaitGroup{}  // storage/drives
-			wg5 := &sync.WaitGroup{}  // pcie devices
 			wg6 := &sync.WaitGroup{}  // network interfaces
 			wg7 := &sync.WaitGroup{}  // ethernet interfaces
 			wg8 := &sync.WaitGroup{}  // simple storage
@@ -209,7 +205,8 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 
 			if !slices.Contains(disabledMetrics, "pcie_devices") {
-				processPcieDevices(system, systemLogContext, wg5, ch, systemHostName)
+				collector := pcie_devices.NewCollector(s.Ctx, s.Log, system)
+				wg.Go(func() { collector.Collect(ch) })
 			}
 
 			if !slices.Contains(disabledMetrics, "network_interfaces") {
@@ -248,7 +245,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 
 			wg3.Wait()
 			wg4.Wait()
-			wg5.Wait()
 			wg6.Wait()
 			wg7.Wait()
 			wg8.Wait()
