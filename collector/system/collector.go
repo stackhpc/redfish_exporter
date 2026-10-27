@@ -9,6 +9,7 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/collector/system/memory"
+	"github.com/stackhpc/redfish_exporter/collector/system/network_interfaces"
 	"github.com/stackhpc/redfish_exporter/collector/system/pcie_devices"
 	"github.com/stackhpc/redfish_exporter/collector/system/processors"
 	"github.com/stackhpc/redfish_exporter/common"
@@ -24,7 +25,6 @@ var (
 	SystemDeviceLabelNames            = []string{"hostname", "resource", "device"}
 	SystemDriveLabelNames             = []string{"hostname", "resource", "drive", "drive_id"}
 	SystemStorageControllerLabelNames = []string{"hostname", "resource", "storage_controller", "storage_controller_id"}
-	SystemNetworkInterfaceLabelNames  = []string{"hostname", "resource", "network_interface", "network_interface_id"}
 	SystemEthernetInterfaceLabelNames = []string{"hostname", "resource", "ethernet_interface", "ethernet_interface_id", "ethernet_interface_speed"}
 	SystemPCIeFunctionLabelNames      = []string{"hostname", "resource", "pcie_function_name", "pcie_function_id", "pci_function_deviceclass", "pci_function_type"}
 
@@ -75,9 +75,6 @@ func createSystemMetricMap() map[string]common.Metric {
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_state", fmt.Sprintf("system pcie function state,%s", common.StateHelp), SystemPCIeFunctionLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_health_state", fmt.Sprintf("system pcie device function state,%s", common.HealthHelp), SystemPCIeFunctionLabelNames)
-
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "network_interface_state", fmt.Sprintf("system network interface state,%s", common.StateHelp), SystemNetworkInterfaceLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "network_interface_health_state", fmt.Sprintf("system network interface health state,%s", common.HealthHelp), SystemNetworkInterfaceLabelNames)
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_state", fmt.Sprintf("system ethernet interface state,%s", common.StateHelp), SystemEthernetInterfaceLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_health_state", fmt.Sprintf("system ethernet interface health state,%s", common.HealthHelp), SystemEthernetInterfaceLabelNames)
@@ -182,7 +179,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 
 			wg3 := &sync.WaitGroup{}  // storage/volumes
 			wg4 := &sync.WaitGroup{}  // storage/drives
-			wg6 := &sync.WaitGroup{}  // network interfaces
 			wg7 := &sync.WaitGroup{}  // ethernet interfaces
 			wg8 := &sync.WaitGroup{}  // simple storage
 			wg9 := &sync.WaitGroup{}  // pcie functions
@@ -210,7 +206,8 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 
 			if !slices.Contains(disabledMetrics, "network_interfaces") {
-				processNetworkInterfaces(system, systemLogContext, wg6, ch, systemHostName)
+				collector := network_interfaces.NewCollector(s.Ctx, s.Log, system)
+				wg.Go(func() { collector.Collect(ch) })
 			}
 
 			if !slices.Contains(disabledMetrics, "ethernet_interfaces") {
@@ -245,7 +242,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 
 			wg3.Wait()
 			wg4.Wait()
-			wg6.Wait()
 			wg7.Wait()
 			wg8.Wait()
 			wg9.Wait()
@@ -329,29 +325,6 @@ func processStorage(system *schemas.ComputerSystem, systemLogContext *slog.Logge
 	}
 }
 
-func processPcieDevices(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg5 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
-	pcieDevices, err := system.PCIeDevices()
-	if err != nil {
-		systemLogContext.Error("error getting PCI-E device data from system", "operation", "system.PCIeDevices()", "err", err)
-	} else if pcieDevices == nil {
-		systemLogContext.Info("no PCI-E device data found", "operation", "system.PCIeDevices()")
-	} else {
-		processed := make(map[string]bool)
-		wg5.Add(len(pcieDevices))
-		//Some devices are returning duplicated PCIeDevices. This is workaround for this. Example of such data can be found in sampleOut/system_duplicated_devices.json
-		for _, pcieDevice := range pcieDevices {
-			_, exists := processed[pcieDevice.ODataID]
-			if exists {
-				systemLogContext.Info(fmt.Sprintf("Ignoring duplicate pci device: %s", pcieDevice.ODataID), "operation", "system.PCIeDevices()")
-				wg5.Done()
-				continue
-			}
-			processed[pcieDevice.ODataID] = true
-			go parsePcieDevice(ch, systemHostName, pcieDevice, wg5)
-		}
-	}
-}
-
 func processPcieFunctions(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg9 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
 	pcieFunctions, err := system.PCIeFunctions()
 	if err != nil {
@@ -409,20 +382,6 @@ func processEthernetInterfaces(system *schemas.ComputerSystem, systemLogContext 
 	}
 }
 
-func processNetworkInterfaces(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg6 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
-	networkInterfaces, err := system.NetworkInterfaces()
-	if err != nil {
-		systemLogContext.Error("error getting network interface data from system", "operation", "system.NetworkInterfaces()", "err", err)
-	} else if networkInterfaces == nil {
-		systemLogContext.Info("no network interface data found", "operation", "system.NetworkInterfaces()")
-	} else {
-		wg6.Add(len(networkInterfaces))
-		for _, networkInterface := range networkInterfaces {
-			go parseNetworkInterface(ch, systemHostName, networkInterface, wg6)
-		}
-	}
-}
-
 func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *schemas.Volume, wg *sync.WaitGroup) {
 	defer wg.Done()
 	volumeName := volume.Name
@@ -468,41 +427,6 @@ func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schem
 	}
 	if drive.CapacityBytes != nil {
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_capacity"].Desc, prometheus.GaugeValue, float64(*drive.CapacityBytes), systemdriveLabelValues...)
-	}
-}
-
-func parsePcieDevice(ch chan<- prometheus.Metric, systemHostName string, pcieDevice *schemas.PCIeDevice, wg *sync.WaitGroup) {
-	defer wg.Done()
-	pcieDeviceName := pcieDevice.Name
-	pcieDeviceID := pcieDevice.ID
-	pcieDeviceState := pcieDevice.Status.State
-	pcieDeviceHealthState := pcieDevice.Status.Health
-	pcieDevicePartNumber := pcieDevice.PartNumber
-	pcieDeviceType := fmt.Sprint(pcieDevice.DeviceType)
-	pcieSerialNumber := pcieDevice.SerialNumber
-	systemPCIeDeviceLabelValues := []string{systemHostName, "pcie_device", pcieDeviceName, pcieDeviceID, pcieDevicePartNumber, pcieDeviceType, pcieSerialNumber}
-
-	if pcieStateVaule, ok := common.ParseCommonStatusState(pcieDeviceState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_device_state"].Desc, prometheus.GaugeValue, pcieStateVaule, systemPCIeDeviceLabelValues...)
-	}
-	if pcieHealthStateVaule, ok := common.ParseCommonStatusHealth(pcieDeviceHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_pcie_device_health_state"].Desc, prometheus.GaugeValue, pcieHealthStateVaule, systemPCIeDeviceLabelValues...)
-	}
-}
-
-func parseNetworkInterface(ch chan<- prometheus.Metric, systemHostName string, networkInterface *schemas.NetworkInterface, wg *sync.WaitGroup) {
-	defer wg.Done()
-	networkInterfaceName := networkInterface.Name
-	networkInterfaceID := networkInterface.ID
-	networkInterfaceState := networkInterface.Status.State
-	networkInterfaceHealthState := networkInterface.Status.Health
-	systemNetworkInterfaceLabelValues := []string{systemHostName, "network_interface", networkInterfaceName, networkInterfaceID}
-
-	if networknetworkInterfaceStateVaule, ok := common.ParseCommonStatusState(networkInterfaceState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_network_interface_state"].Desc, prometheus.GaugeValue, networknetworkInterfaceStateVaule, systemNetworkInterfaceLabelValues...)
-	}
-	if networknetworkInterfaceHealthStateVaule, ok := common.ParseCommonStatusHealth(networkInterfaceHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_network_interface_health_state"].Desc, prometheus.GaugeValue, networknetworkInterfaceHealthStateVaule, systemNetworkInterfaceLabelValues...)
 	}
 }
 
