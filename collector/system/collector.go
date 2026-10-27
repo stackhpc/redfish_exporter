@@ -1,13 +1,13 @@
 package system
 
 import (
-	"bytes"
 	"fmt"
 	"log/slog"
 	"slices"
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stackhpc/redfish_exporter/collector/system/ethernet_interfaces"
 	"github.com/stackhpc/redfish_exporter/collector/system/memory"
 	"github.com/stackhpc/redfish_exporter/collector/system/network_interfaces"
 	"github.com/stackhpc/redfish_exporter/collector/system/pcie_devices"
@@ -25,7 +25,6 @@ var (
 	SystemDeviceLabelNames            = []string{"hostname", "resource", "device"}
 	SystemDriveLabelNames             = []string{"hostname", "resource", "drive", "drive_id"}
 	SystemStorageControllerLabelNames = []string{"hostname", "resource", "storage_controller", "storage_controller_id"}
-	SystemEthernetInterfaceLabelNames = []string{"hostname", "resource", "ethernet_interface", "ethernet_interface_id", "ethernet_interface_speed"}
 	SystemPCIeFunctionLabelNames      = []string{"hostname", "resource", "pcie_function_name", "pcie_function_id", "pci_function_deviceclass", "pci_function_type"}
 
 	SystemLogServiceLabelNames = []string{"system_id", "log_service", "log_service_id", "log_service_enabled", "log_service_overwrite_policy"}
@@ -75,11 +74,6 @@ func createSystemMetricMap() map[string]common.Metric {
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_state", fmt.Sprintf("system pcie function state,%s", common.StateHelp), SystemPCIeFunctionLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "pcie_function_health_state", fmt.Sprintf("system pcie device function state,%s", common.HealthHelp), SystemPCIeFunctionLabelNames)
-
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_state", fmt.Sprintf("system ethernet interface state,%s", common.StateHelp), SystemEthernetInterfaceLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_health_state", fmt.Sprintf("system ethernet interface health state,%s", common.HealthHelp), SystemEthernetInterfaceLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_link_status", fmt.Sprintf("system ethernet interface link status,%s", common.LinkHelp), SystemEthernetInterfaceLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "ethernet_interface_link_enabled", "system ethernet interface if the link is enabled", SystemEthernetInterfaceLabelNames)
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_state", fmt.Sprintf("system log service state,%s", common.StateHelp), SystemLogServiceLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_health_state", fmt.Sprintf("system log service health state,%s", common.HealthHelp), SystemLogServiceLabelNames)
@@ -179,7 +173,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 
 			wg3 := &sync.WaitGroup{}  // storage/volumes
 			wg4 := &sync.WaitGroup{}  // storage/drives
-			wg7 := &sync.WaitGroup{}  // ethernet interfaces
 			wg8 := &sync.WaitGroup{}  // simple storage
 			wg9 := &sync.WaitGroup{}  // pcie functions
 			wg10 := &sync.WaitGroup{} // log services
@@ -211,7 +204,8 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 
 			if !slices.Contains(disabledMetrics, "ethernet_interfaces") {
-				processEthernetInterfaces(system, systemLogContext, wg7, ch, systemHostName)
+				collector := ethernet_interfaces.NewCollector(s.Ctx, s.Log, system)
+				wg.Go(func() { collector.Collect(ch) })
 			}
 
 			if !slices.Contains(disabledMetrics, "simple_storage") {
@@ -242,7 +236,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 
 			wg3.Wait()
 			wg4.Wait()
-			wg7.Wait()
 			wg8.Wait()
 			wg9.Wait()
 			wg10.Wait()
@@ -368,20 +361,6 @@ func processSimpleStorage(system *schemas.ComputerSystem, systemLogContext *slog
 	}
 }
 
-func processEthernetInterfaces(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg7 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
-	ethernetInterfaces, err := system.EthernetInterfaces()
-	if err != nil {
-		systemLogContext.Error("error getting ethernet interface data from system", "operation", "system.EthernetInterfaces()", "err", err)
-	} else if ethernetInterfaces == nil {
-		systemLogContext.Info("no ethernet interface data found", "operation", "system.PCIeDevices()")
-	} else {
-		wg7.Add(len(ethernetInterfaces))
-		for _, ethernetInterface := range ethernetInterfaces {
-			go parseEthernetInterface(ch, systemHostName, ethernetInterface, wg7)
-		}
-	}
-}
-
 func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *schemas.Volume, wg *sync.WaitGroup) {
 	defer wg.Done()
 	volumeName := volume.Name
@@ -428,51 +407,6 @@ func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schem
 	if drive.CapacityBytes != nil {
 		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_capacity"].Desc, prometheus.GaugeValue, float64(*drive.CapacityBytes), systemdriveLabelValues...)
 	}
-}
-
-func parseEthernetInterface(ch chan<- prometheus.Metric, systemHostName string, ethernetInterface *schemas.EthernetInterface, wg *sync.WaitGroup) {
-	defer wg.Done()
-	//ethernetInterfaceODataIDslice := strings.Split(ethernetInterface.ODataID, "/")
-	//ethernetInterfaceName := ethernetInterfaceODataIDslice[len(ethernetInterfaceODataIDslice)-1]
-	ethernetInterfaceName := ethernetInterface.Name
-	ethernetInterfaceID := ethernetInterface.ID
-	ethernetInterfaceLinkStatus := ethernetInterface.LinkStatus
-	ethernetInterfaceEnabled := ethernetInterface.InterfaceEnabled
-	ethernetInterfaceSpeed := fmt.Sprintf("%d Mbps", ethernetInterface.SpeedMbps)
-	ethernetInterfaceState := ethernetInterface.Status.State
-	ethernetInterfaceHealthState := ethernetInterface.Status.Health
-	systemEthernetInterfaceLabelValues := []string{systemHostName, "ethernet_interface", ethernetInterfaceName, ethernetInterfaceID, ethernetInterfaceSpeed}
-	if ethernetInterfaceStateValue, ok := common.ParseCommonStatusState(ethernetInterfaceState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_state"].Desc, prometheus.GaugeValue, ethernetInterfaceStateValue, systemEthernetInterfaceLabelValues...)
-	}
-	if ethernetInterfaceHealthStateValue, ok := common.ParseCommonStatusHealth(ethernetInterfaceHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_health_state"].Desc, prometheus.GaugeValue, ethernetInterfaceHealthStateValue, systemEthernetInterfaceLabelValues...)
-	}
-	if ethernetInterfaceLinkStatusValue, ok := parseLinkStatus(ethernetInterfaceLinkStatus); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_link_status"].Desc, prometheus.GaugeValue, ethernetInterfaceLinkStatusValue, systemEthernetInterfaceLabelValues...)
-	}
-
-	ch <- prometheus.MustNewConstMetric(systemMetrics["system_ethernet_interface_link_enabled"].Desc, prometheus.GaugeValue, boolToFloat64(ethernetInterfaceEnabled), systemEthernetInterfaceLabelValues...)
-}
-
-func parseLinkStatus(status schemas.LinkStatus) (float64, bool) {
-	if bytes.Equal([]byte(status), []byte("LinkUp")) {
-		return float64(1), true
-	} else if bytes.Equal([]byte(status), []byte("NoLink")) {
-		return float64(2), true
-	} else if bytes.Equal([]byte(status), []byte("LinkDown")) {
-		return float64(3), true
-	}
-	return float64(0), false
-}
-
-func boolToFloat64(data bool) float64 {
-
-	if data {
-		return float64(1)
-	}
-	return float64(0)
-
 }
 
 func parsePcieFunction(ch chan<- prometheus.Metric, systemHostName string, pcieFunction *schemas.PCIeFunction, wg *sync.WaitGroup) {

@@ -102,3 +102,12 @@ func ParseLogEntry(ch chan<- prometheus.Metric, desc *prometheus.Desc, collector
 		ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, logEntrySeverityStateValue, logEntryLabelValues...)
 	}
 }
+
+func BoolToFloat64(data bool) float64 {
+
+	if data {
+		return float64(1)
+	}
+	return float64(0)
+
+}
