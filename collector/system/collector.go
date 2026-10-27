@@ -13,6 +13,7 @@ import (
 	"github.com/stackhpc/redfish_exporter/collector/system/pcie_devices"
 	"github.com/stackhpc/redfish_exporter/collector/system/pcie_functions"
 	"github.com/stackhpc/redfish_exporter/collector/system/processors"
+	"github.com/stackhpc/redfish_exporter/collector/system/simple_storage"
 	"github.com/stackhpc/redfish_exporter/collector/system/storage"
 	"github.com/stackhpc/redfish_exporter/common"
 	"github.com/stmcginnis/gofish/schemas"
@@ -23,9 +24,6 @@ var (
 	SystemSubsystem                   = "system"
 	SystemLabelNames                  = []string{"hostname", "resource", "system_id"}
 	SystemBIOSLabelNames              = append(slices.Clone(SystemLabelNames), "bios_version")
-	SystemDeviceLabelNames            = []string{"hostname", "resource", "device"}
-	SystemDriveLabelNames             = []string{"hostname", "resource", "drive", "drive_id"}
-	SystemStorageControllerLabelNames = []string{"hostname", "resource", "storage_controller", "storage_controller_id"}
 
 	SystemLogServiceLabelNames = []string{"system_id", "log_service", "log_service_id", "log_service_enabled", "log_service_overwrite_policy"}
 	SystemLogEntryLabelNames   = []string{"system_id", "log_service", "log_service_id", "log_entry", "log_entry_id", "log_entry_code", "log_entry_type", "log_entry_message_id", "log_entry_sensor_number", "log_entry_sensor_type"}
@@ -57,9 +55,6 @@ func createSystemMetricMap() map[string]common.Metric {
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_state", fmt.Sprintf("system overall processor state,%s", common.StateHelp), SystemLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_health_state", fmt.Sprintf("system overall processor health,%s", common.HealthHelp), SystemLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "total_processor_count", "system total processor count", SystemLabelNames)
-
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "simple_storage_device_state", fmt.Sprintf("system simple storage device state,%s", common.StateHelp), SystemDeviceLabelNames)
-	common.AddToMetricMap(systemMetrics, SystemSubsystem, "simple_storage_device_health_state", fmt.Sprintf("system simple storage device health state,%s", common.HealthHelp), SystemDeviceLabelNames)
 
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_state", fmt.Sprintf("system log service state,%s", common.StateHelp), SystemLogServiceLabelNames)
 	common.AddToMetricMap(systemMetrics, SystemSubsystem, "log_service_health_state", fmt.Sprintf("system log service health state,%s", common.HealthHelp), SystemLogServiceLabelNames)
@@ -154,8 +149,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 				ch <- prometheus.MustNewConstMetric(s.metrics["system_total_memory_health_state"].Desc, prometheus.GaugeValue, systemTotalMemoryHealthStateValue, systemLabelValues...)
 			}
 
-			wg8 := &sync.WaitGroup{}  // simple storage
-
 			wg := &sync.WaitGroup{}
 
 			if !slices.Contains(disabledMetrics, "memory") {
@@ -189,7 +182,8 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			}
 
 			if !slices.Contains(disabledMetrics, "simple_storage") {
-				processSimpleStorage(system, systemLogContext, wg8, ch, systemHostName)
+				collector := simple_storage.NewCollector(s.Ctx, s.Log, system)
+				wg.Go(func() { collector.Collect(ch) })
 			}
 
 			if !slices.Contains(disabledMetrics, "pcie_functions") {
@@ -201,8 +195,6 @@ func (s *SystemCollector) Collect(ch chan<- prometheus.Metric) {
 			if collectLogs {
 				wg.Go(func() { s.collectLogs(ch, system) })
 			}
-
-			wg8.Wait()
 
 			wg.Wait()
 
@@ -232,151 +224,4 @@ func (c* SystemCollector) collectLogs(ch chan<- prometheus.Metric, system *schem
 	}
 
 	wg.Wait()
-}
-
-func processStorage(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg3 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string, wg4 *sync.WaitGroup) {
-	storages, err := system.Storage()
-	if err != nil {
-		systemLogContext.Error("error getting storage data from system", "operation", "system.Storage()", "err", err)
-	} else if storages == nil {
-		systemLogContext.Info("no storage data found", "operation", "system.Storage()")
-	} else {
-		processed := make(map[string]bool)
-		for _, storage := range storages {
-			if volumes, err := storage.Volumes(); err != nil {
-				systemLogContext.Error("error getting storage data from system", "operation", "system.Volumes()", "err", err)
-			} else {
-				wg3.Add(len(volumes))
-
-				for _, volume := range volumes {
-					_, exists := processed[volume.Name]
-					if exists {
-						systemLogContext.With("operation",
-							"system.Storage()").Info(fmt.Sprintf("Ignoring "+
-							"duplicate storage volume: %s. Please check whether this "+
-							"volume is returning duplicate data and report to the vendor.",
-							volume.Name))
-						wg3.Done()
-						continue
-					}
-					go parseVolume(ch, systemHostName, volume, wg3)
-					processed[volume.Name] = true
-				}
-			}
-
-			drives, err := storage.Drives()
-			if err != nil {
-				systemLogContext.Error("error getting drive data from system", "operation", "system.Drives()", "err", err)
-			} else if drives == nil {
-				systemLogContext.Info("no drive data found", "operation", "system.Drives()", "storage", storage.ID)
-			} else {
-				wg4.Add(len(drives))
-				for _, drive := range drives {
-					go parseDrive(ch, systemHostName, drive, wg4)
-				}
-			}
-
-			//					if storagecontrollers, err := storage.StorageControllers(); err != nil {
-			//						log.Infof("Errors Getting storagecontrollers from system storage : %s", err)
-			//					} else {
-			//
-			//						for _, controller := range storagecontrollers {
-			//
-			//							controllerODataIDslice := strings.Split(controller.ODataID, "/")
-			//							controllerName := controllerODataIDslice[len(controllerODataIDslice)-1]
-			//							controllerState := controller.Status.State
-			//							controllerHealthState := controller.Status.Health
-			//							controllerLabelValues := []string{ "storage_controller", controllerName, systemHostName)
-			//							if controllerStateValue,ok := parseCommonStatusState(controllerState); ok {
-			//								ch <- prometheus.MustNewConstMetric(s.metrics["system_storage_controller_state"].desc, prometheus.GaugeValue, controllerStateValue, //controllerLabelValues...)
-			//
-			//							}
-			//							if controllerHealthStateValue,ok := parseCommonStatusHealth(controllerHealthState); ok {
-			//								ch <- prometheus.MustNewConstMetric(s.metrics["system_storage_controller_health_state"].desc, prometheus.GaugeValue, controllerHealthStateValue, //controllerLabelValues...)
-			//
-			//							}
-			//
-			//						}
-			//
-			//					}
-
-		}
-	}
-}
-
-func processSimpleStorage(system *schemas.ComputerSystem, systemLogContext *slog.Logger, wg8 *sync.WaitGroup, ch chan<- prometheus.Metric, systemHostName string) {
-	simpleStorages, err := system.SimpleStorage()
-	if err != nil {
-		systemLogContext.Error("error getting simple storage data from system", "operation", "system.SimpleStorages()", "err", err)
-	} else if simpleStorages == nil {
-		systemLogContext.Info("no simple storage data found", "operation", "system.SimpleStorages()")
-	} else {
-		processed := make(map[string]bool)
-		for _, simpleStorage := range simpleStorages {
-			devices := simpleStorage.Devices
-			wg8.Add(len(devices))
-			for _, device := range devices {
-				_, exists := processed[device.Name]
-				if exists {
-					systemLogContext.With("operation",
-						"system.SimpleStorages()").Info(fmt.Sprintf("Ignoring "+
-						"duplicate storage device: %s. Please check whether this "+
-						"device is returning duplicate data and report to the vendor.",
-						device.Name))
-					wg8.Done()
-					continue
-				}
-				go parseDevice(ch, systemHostName, device, wg8)
-				processed[device.Name] = true
-			}
-		}
-	}
-}
-
-func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *schemas.Volume, wg *sync.WaitGroup) {
-	defer wg.Done()
-	volumeName := volume.Name
-	volumeID := volume.ID
-	volumeState := volume.Status.State
-	volumeHealthState := volume.Status.Health
-	systemVolumeLabelValues := []string{systemHostName, "volume", volumeName, volumeID}
-	if volumeStateValue, ok := common.ParseCommonStatusState(volumeState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_state"].Desc, prometheus.GaugeValue, volumeStateValue, systemVolumeLabelValues...)
-	}
-	if volumeHealthStateValue, ok := common.ParseCommonStatusHealth(volumeHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_health_state"].Desc, prometheus.GaugeValue, volumeHealthStateValue, systemVolumeLabelValues...)
-	}
-	if volume.CapacityBytes != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_volume_capacity"].Desc, prometheus.GaugeValue, float64(*volume.CapacityBytes), systemVolumeLabelValues...)
-	}
-}
-func parseDevice(ch chan<- prometheus.Metric, systemHostName string, device schemas.Device, wg *sync.WaitGroup) {
-	defer wg.Done()
-	deviceName := device.Name
-	deviceState := device.Status.State
-	deviceHealthState := device.Status.Health
-	systemDeviceLabelValues := []string{systemHostName, "device", deviceName}
-	if deviceStateValue, ok := common.ParseCommonStatusState(deviceState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_simple_storage_device_state"].Desc, prometheus.GaugeValue, deviceStateValue, systemDeviceLabelValues...)
-	}
-	if deviceHealthStateValue, ok := common.ParseCommonStatusHealth(deviceHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_simple_storage_device_health_state"].Desc, prometheus.GaugeValue, deviceHealthStateValue, systemDeviceLabelValues...)
-	}
-}
-func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schemas.Drive, wg *sync.WaitGroup) {
-	defer wg.Done()
-	driveName := drive.Name
-	driveID := drive.ID
-	driveState := drive.Status.State
-	driveHealthState := drive.Status.Health
-	systemdriveLabelValues := []string{systemHostName, "drive", driveName, driveID}
-	if driveStateValue, ok := common.ParseCommonStatusState(driveState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_state"].Desc, prometheus.GaugeValue, driveStateValue, systemdriveLabelValues...)
-	}
-	if driveHealthStateValue, ok := common.ParseCommonStatusHealth(driveHealthState); ok {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_health_state"].Desc, prometheus.GaugeValue, driveHealthStateValue, systemdriveLabelValues...)
-	}
-	if drive.CapacityBytes != nil {
-		ch <- prometheus.MustNewConstMetric(systemMetrics["system_storage_drive_capacity"].Desc, prometheus.GaugeValue, float64(*drive.CapacityBytes), systemdriveLabelValues...)
-	}
 }
