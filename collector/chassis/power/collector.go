@@ -31,7 +31,6 @@ func createMetricMap() map[string]common.Metric {
 // Implements the prometheus.Collector.
 type Collector struct {
 	Ctx     *common.CollectionContext
-	metrics map[string]common.Metric
 	Log     *slog.Logger
 	chassis *schemas.Chassis
 }
@@ -39,7 +38,6 @@ type Collector struct {
 // NewCollector returns a collector that collects chassis power data
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassis *schemas.Chassis) *Collector {
 	return &Collector{
-		metrics: metricMap,
 		Ctx:     ctx,
 		Log: logger.With(
 			"collector", Subsystem,
@@ -49,11 +47,16 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassis *s
 }
 
 // Describe implemented prometheus.Collector
-func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
-	for _, metric := range c.metrics {
+func Describe(ch chan<- *prometheus.Desc) {
+	for _, metric := range metricMap {
 		ch <- metric.Desc
 	}
 	power_common.Describe(ch)
+}
+
+// Describe implemented prometheus.Collector
+func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
+	Describe(ch)
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {

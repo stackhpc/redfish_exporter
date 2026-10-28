@@ -13,6 +13,7 @@ import (
 	"github.com/stackhpc/redfish_exporter/collector/chassis/power"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/power_subsystem"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/thermal"
+	"github.com/stackhpc/redfish_exporter/collector/chassis/thermal_subsystem"
 	"github.com/stackhpc/redfish_exporter/common"
 )
 
@@ -80,7 +81,11 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 		ch <- metric.Desc
 	}
 	c.collectorScrapeStatus.Describe(ch)
-
+	network_adapters.Describe(ch)
+	power.Describe(ch)
+	power_subsystem.Describe(ch)
+	thermal.Describe(ch)
+	thermal_subsystem.Describe(ch)
 }
 
 // Collect implemented prometheus.Collector
