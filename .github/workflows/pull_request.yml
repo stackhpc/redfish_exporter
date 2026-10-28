@@ -19,5 +19,10 @@ jobs:
     - name: Check style
       run: make style
 
+    - name: Run tests
+      run: go test ./...
+      env:
+        FIXTURES_DIR: "${{ github.workspace }}/test_dependencies"
+
     - name: Build Docker container
       run: make docker-build
