@@ -38,7 +38,7 @@ type Collector struct {
 // NewCollector returns a collector that collects chassis power data
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassis *schemas.Chassis) *Collector {
 	return &Collector{
-		Ctx:     ctx,
+		Ctx: ctx,
 		Log: logger.With(
 			"collector", Subsystem,
 		),

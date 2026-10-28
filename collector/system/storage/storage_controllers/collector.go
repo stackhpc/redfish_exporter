@@ -38,7 +38,7 @@ type Collector struct {
 // NewCollector returns a collector that collects storage volume data
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *schemas.Storage, hostname *string) *Collector {
 	return &Collector{
-		Ctx:     ctx,
+		Ctx: ctx,
 		Log: logger.With(
 			"collector", Subsystem,
 			"storage", storage.ID,
@@ -69,10 +69,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 	wg := &sync.WaitGroup{}
 	for _, controller := range storageControllers {
-		wg.Go(func() { c.parseController(ch, controller)})
+		wg.Go(func() { c.parseController(ch, controller) })
 	}
 	for _, controller := range c.storage.StorageControllers { // Deprecated in Redfish v1.13.0
-		wg.Go(func() { c.parseController(ch, &controller)})
+		wg.Go(func() { c.parseController(ch, &controller) })
 	}
 	wg.Wait()
 }

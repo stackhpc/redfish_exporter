@@ -10,8 +10,8 @@ import (
 )
 
 var (
-	Subsystem             = "chassis"
-	FanLabelNames         = []string{"resource", "chassis_id", "fan", "fan_id", "fan_unit"}
+	Subsystem     = "chassis"
+	FanLabelNames = []string{"resource", "chassis_id", "fan", "fan_id", "fan_unit"}
 
 	metricMap = createMetricMap()
 )

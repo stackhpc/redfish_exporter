@@ -29,15 +29,15 @@ func createMetricMap() map[string]common.Metric {
 
 // Implements the prometheus.Collector.
 type Collector struct {
-	Ctx     *common.CollectionContext
-	Log     *slog.Logger
-	system  *schemas.ComputerSystem
+	Ctx    *common.CollectionContext
+	Log    *slog.Logger
+	system *schemas.ComputerSystem
 }
 
 // NewCollector returns a collector that collects system memory data
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, system *schemas.ComputerSystem) *Collector {
 	return &Collector{
-		Ctx:     ctx,
+		Ctx: ctx,
 		Log: logger.With(
 			"collector", Subsystem,
 			"system", system.ID,

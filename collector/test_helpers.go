@@ -38,7 +38,7 @@ func CreateStaticBMC(t *testing.T, path string, collect_logs bool) *RedfishColle
 
 	targetLoggerCtx := promslog.New(&promslogConfig)
 
-	hostConfig := common.HostConfig {
+	hostConfig := common.HostConfig{
 		Collectlogs: collect_logs,
 	}
 	require.NoError(t, err)

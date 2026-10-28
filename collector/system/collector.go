@@ -20,9 +20,9 @@ import (
 )
 
 var (
-	Subsystem  = "system"
-	SystemLabelNames = []string{"hostname", "resource", "system_id"}
-	SystemBIOSLabelNames              = append(slices.Clone(SystemLabelNames), "bios_version")
+	Subsystem            = "system"
+	SystemLabelNames     = []string{"hostname", "resource", "system_id"}
+	SystemBIOSLabelNames = append(slices.Clone(SystemLabelNames), "bios_version")
 
 	SystemLogServiceLabelNames = []string{"system_id", "log_service", "log_service_id", "log_service_enabled", "log_service_overwrite_policy"}
 	SystemLogEntryLabelNames   = []string{"system_id", "log_service", "log_service_id", "log_entry", "log_entry_id", "log_entry_code", "log_entry_type", "log_entry_message_id", "log_entry_sensor_number", "log_entry_sensor_type"}
@@ -55,7 +55,7 @@ func createMetricMap() map[string]common.Metric {
 
 // Collector implements the prometheus.Collector.
 type Collector struct {
-	Ctx     *common.CollectionContext
+	Ctx *common.CollectionContext
 	prometheus.Collector
 	collectorScrapeStatus *prometheus.GaugeVec
 	Log                   *slog.Logger
@@ -64,7 +64,7 @@ type Collector struct {
 // NewCollector returns a collector that collecting memory statistics
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector {
 	return &Collector{
-		Ctx:     ctx,
+		Ctx: ctx,
 		Log: logger.With(
 			"collector", "SystemCollector",
 		),

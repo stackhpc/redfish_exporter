@@ -58,7 +58,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector
 	// get service from redfish client
 
 	return &Collector{
-		Ctx:     ctx,
+		Ctx: ctx,
 		Log: logger.With(
 			"collector", "ChassisCollector",
 		),
@@ -151,7 +151,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.collectorScrapeStatus.WithLabelValues("chassis").Set(float64(1))
 }
 
-func (c* Collector) collectLogs(ch chan<- prometheus.Metric, chassis *schemas.Chassis) {
+func (c *Collector) collectLogs(ch chan<- prometheus.Metric, chassis *schemas.Chassis) {
 	logServices, err := chassis.LogServices()
 	if err != nil {
 		c.Log.Error("error getting log services from chassis", "operation", "chassis.LogServices()", "err", err)
