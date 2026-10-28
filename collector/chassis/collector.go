@@ -27,39 +27,37 @@ var (
 	ChassisLogServiceLabelNames = []string{"chassis_id", "log_service", "log_service_id", "log_service_enabled", "log_service_overwrite_policy"}
 	ChassisLogEntryLabelNames   = []string{"chassis_id", "log_service", "log_service_id", "log_entry", "log_entry_id", "log_entry_code", "log_entry_type", "log_entry_message_id", "log_entry_sensor_number", "log_entry_sensor_type"}
 
-	chassisMetrics = createChassisMetricMap()
+	metricMap = createMetricMap()
 )
+
+func createMetricMap() map[string]common.Metric {
+	metrics := make(map[string]common.Metric)
+	common.AddToMetricMap(metrics, ChassisSubsystem, "health", fmt.Sprintf("health of chassis,%s", common.HealthHelp), ChassisLabelNames)
+	common.AddToMetricMap(metrics, ChassisSubsystem, "state", fmt.Sprintf("state of chassis,%s", common.StateHelp), ChassisLabelNames)
+	common.AddToMetricMap(metrics, ChassisSubsystem, "model_info", "organization responsible for producing the chassis, the name by which the manufacturer generally refers to the chassis, and a part number and sku assigned by the organization that is responsible for producing or manufacturing the chassis", ChassisModel)
+
+	common.AddToMetricMap(metrics, ChassisSubsystem, "physical_security_sensor_state", fmt.Sprintf("indicates the known state of the physical security sensor, such as if it is hardware intrusion detected,%s", common.IntrusionSensorHelp), ChassisPhysicalSecurityLabelNames)
+
+	common.AddToMetricMap(metrics, ChassisSubsystem, "log_service_state", fmt.Sprintf("chassis log service state,%s", common.StateHelp), ChassisLogServiceLabelNames)
+	common.AddToMetricMap(metrics, ChassisSubsystem, "log_service_health_state", fmt.Sprintf("chassis log service health state,%s", common.HealthHelp), ChassisLogServiceLabelNames)
+	common.AddToMetricMap(metrics, ChassisSubsystem, "log_entry_severity_state", fmt.Sprintf("chassis log entry severity state,%s", common.SeverityHelp), ChassisLogEntryLabelNames)
+
+	return metrics
+}
 
 // Collector implements the prometheus.Collector.
 type Collector struct {
 	Ctx                   *common.CollectionContext
-	metrics               map[string]common.Metric
 	collectorScrapeStatus *prometheus.GaugeVec
 	Log                   *slog.Logger
 	thermal               *thermal.Collector
 }
 
-func createChassisMetricMap() map[string]common.Metric {
-	chassisMetrics := make(map[string]common.Metric)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "health", fmt.Sprintf("health of chassis,%s", common.HealthHelp), ChassisLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "state", fmt.Sprintf("state of chassis,%s", common.StateHelp), ChassisLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "model_info", "organization responsible for producing the chassis, the name by which the manufacturer generally refers to the chassis, and a part number and sku assigned by the organization that is responsible for producing or manufacturing the chassis", ChassisModel)
-
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "physical_security_sensor_state", fmt.Sprintf("indicates the known state of the physical security sensor, such as if it is hardware intrusion detected,%s", common.IntrusionSensorHelp), ChassisPhysicalSecurityLabelNames)
-
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "log_service_state", fmt.Sprintf("chassis log service state,%s", common.StateHelp), ChassisLogServiceLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "log_service_health_state", fmt.Sprintf("chassis log service health state,%s", common.HealthHelp), ChassisLogServiceLabelNames)
-	common.AddToMetricMap(chassisMetrics, ChassisSubsystem, "log_entry_severity_state", fmt.Sprintf("chassis log entry severity state,%s", common.SeverityHelp), ChassisLogEntryLabelNames)
-
-	return chassisMetrics
-}
-
-// NewChassisCollector returns a collector that collecting chassis statistics
-func NewChassisCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector {
+// NewCollector returns a collector that collecting chassis statistics
+func NewCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector {
 	// get service from redfish client
 
 	return &Collector{
-		metrics: chassisMetrics,
 		Ctx:     ctx,
 		Log: logger.With(
 			"collector", "ChassisCollector",
@@ -77,7 +75,7 @@ func NewChassisCollector(ctx *common.CollectionContext, logger *slog.Logger) *Co
 
 // Describe implemented prometheus.Collector
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
-	for _, metric := range c.metrics {
+	for _, metric := range metricMap {
 		ch <- metric.Desc
 	}
 	c.collectorScrapeStatus.Describe(ch)
@@ -107,14 +105,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		chassisLogContext.Info("collector scrape started")
 		ChassisLabelValues := []string{"chassis", chassis.ID}
 		if chassisStatusHealthValue, ok := common.ParseCommonStatusHealth(chassis.Status.Health); ok {
-			ch <- prometheus.MustNewConstMetric(c.metrics["chassis_health"].Desc, prometheus.GaugeValue, chassisStatusHealthValue, ChassisLabelValues...)
+			ch <- prometheus.MustNewConstMetric(metricMap["chassis_health"].Desc, prometheus.GaugeValue, chassisStatusHealthValue, ChassisLabelValues...)
 		}
 		if chassisStatusStateValue, ok := common.ParseCommonStatusState(chassis.Status.State); ok {
-			ch <- prometheus.MustNewConstMetric(c.metrics["chassis_state"].Desc, prometheus.GaugeValue, chassisStatusStateValue, ChassisLabelValues...)
+			ch <- prometheus.MustNewConstMetric(metricMap["chassis_state"].Desc, prometheus.GaugeValue, chassisStatusStateValue, ChassisLabelValues...)
 		}
 
 		ChassisModelLabelValues := []string{"chassis", chassis.ID, chassis.Manufacturer, chassis.Model, chassis.PartNumber, chassis.SKU}
-		ch <- prometheus.MustNewConstMetric(c.metrics["chassis_model_info"].Desc, prometheus.GaugeValue, 1, ChassisModelLabelValues...)
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_model_info"].Desc, prometheus.GaugeValue, 1, ChassisModelLabelValues...)
 
 		physicalSecurity := chassis.PhysicalSecurity
 		if physicalSecurity != (schemas.PhysicalSecurity{}) {
@@ -124,7 +122,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 			if phySecIntrusionSensor, ok := parsePhySecIntrusionSensor(physicalSecurityIntrusionSensor); ok {
 				ChassisPhysicalSecurityLabelValues := []string{"physical_security", chassis.ID, physicalSecurityIntrusionSensorNumber, physicalSecurityIntrusionSensorReArmMethod}
-				ch <- prometheus.MustNewConstMetric(chassisMetrics["chassis_physical_security_sensor_state"].Desc, prometheus.GaugeValue, phySecIntrusionSensor, ChassisPhysicalSecurityLabelValues...)
+				ch <- prometheus.MustNewConstMetric(metricMap["chassis_physical_security_sensor_state"].Desc, prometheus.GaugeValue, phySecIntrusionSensor, ChassisPhysicalSecurityLabelValues...)
 			}
 		}
 
@@ -166,7 +164,7 @@ func (c* Collector) collectLogs(ch chan<- prometheus.Metric, chassis *schemas.Ch
 	wg := &sync.WaitGroup{}
 	for _, logService := range logServices {
 		wg.Go(func() {
-			if err = common.ParseLogService(ch, chassisMetrics, c.Ctx, c.Log.With("log_service", logService.ID), ChassisSubsystem, chassis.ID, logService); err != nil {
+			if err = common.ParseLogService(ch, metricMap, c.Ctx, c.Log.With("log_service", logService.ID), ChassisSubsystem, chassis.ID, logService); err != nil {
 				c.Log.Error("error getting log entries from log service", "operation", "chassis.LogServices()", "err", err)
 			}
 		})
