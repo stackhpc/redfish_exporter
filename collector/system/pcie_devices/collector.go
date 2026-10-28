@@ -64,7 +64,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		c.Log.Error("error getting PCI-E device data from system", "operation", "system.PCIeDevices()", "err", err)
 		return
 	} else if pcieDevices == nil {
-		c.Log.Info("no PCI-E device data found", "operation", "system.PCIeDevices()")
+		c.Log.Debug("no PCI-E device data found", "operation", "system.PCIeDevices()")
 		return
 	}
 

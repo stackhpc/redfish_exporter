@@ -64,7 +64,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		c.Log.Error("error getting simple storage data from system", "operation", "system.SimpleStorages()", "err", err)
 		return
 	} else if simpleStorages == nil {
-		c.Log.Info("no simple storage data found", "operation", "system.SimpleStorages()")
+		c.Log.Debug("no simple storage data found", "operation", "system.SimpleStorages()")
 		return
 	}
 

@@ -72,7 +72,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		c.Log.Error("error getting network adapters data from chassis", "operation", "chassis.NetworkAdapters()", "err", err)
 		return
 	} else if networkAdapters == nil {
-		c.Log.Info("no network adapters data found", "operation", "chassis.NetworkAdapters()")
+		c.Log.Debug("no network adapters data found", "operation", "chassis.NetworkAdapters()")
 		return
 	}
 

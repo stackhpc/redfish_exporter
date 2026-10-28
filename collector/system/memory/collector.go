@@ -65,7 +65,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		c.Log.Error("error getting memory data from system", "operation", "system.Memory()", "err", err)
 		return
 	} else if memories == nil {
-		c.Log.Info("no memory data found", "operation", "system.Memory()")
+		c.Log.Debug("no memory data found", "operation", "system.Memory()")
 		return
 	}
 

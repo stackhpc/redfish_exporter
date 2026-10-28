@@ -122,7 +122,7 @@ func (c *Collector) collectManager(ch chan<- prometheus.Metric, manager *schemas
 		if err != nil {
 			logContext.Error("error getting log services from manager", "operation", "manager.LogServices()", "err", err)
 		} else if logServices == nil {
-			logContext.Info("no log services found", "operation", "manager.LogServices()")
+			logContext.Debug("no log services found", "operation", "manager.LogServices()")
 		} else {
 			wg := &sync.WaitGroup{}
 

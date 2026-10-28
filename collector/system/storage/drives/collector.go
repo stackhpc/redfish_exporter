@@ -67,7 +67,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		c.Log.Error("error getting drive data from system", "operation", "system.Drives()", "err", err)
 		return
 	} else if drives == nil {
-		c.Log.Info("no drive data found", "operation", "system.Drives()")
+		c.Log.Debug("no drive data found", "operation", "system.Drives()")
 		return
 	}
 

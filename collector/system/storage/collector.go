@@ -64,7 +64,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		c.Log.Error("error getting storage data from system", "operation", "system.Storage()", "err", err)
 		return
 	} else if storages == nil {
-		c.Log.Info("no storage data found", "operation", "system.Storage()")
+		c.Log.Debug("no storage data found", "operation", "system.Storage()")
 		return
 	}
 
