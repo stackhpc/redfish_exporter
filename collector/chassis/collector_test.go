@@ -10,11 +10,11 @@ import (
 )
 
 func TestPublicCXL_2026_2(t *testing.T) {
-	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-cxl", true)
+	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-cxl")
 
 	ctx := common.CollectionContext{
 		RedfishClient: redfishClient,
-		CollectLogs: true,
+		CollectLogs:   true,
 	}
 
 	promslogConfig := promslog.Config{}
@@ -52,11 +52,11 @@ func TestPublicCXL_2026_2(t *testing.T) {
 }
 
 func TestPublicCables_2026_2(t *testing.T) {
-	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-cables", true)
+	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-cables")
 
 	ctx := common.CollectionContext{
 		RedfishClient: redfishClient,
-		CollectLogs: true,
+		CollectLogs:   true,
 	}
 
 	promslogConfig := promslog.Config{}

@@ -11,7 +11,7 @@ import (
 )
 
 func TestPublicTower_2026_2(t *testing.T) {
-	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-tower", false)
+	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-tower")
 
 	systems, err := redfishClient.Service.Systems()
 	require.NoError(t, err)
