@@ -206,7 +206,7 @@ func (c *Collector) collectLogs(ch chan<- prometheus.Metric, system *schemas.Com
 		c.Log.Error("error getting log services from system", "operation", "system.LogServices()", "err", err)
 		return
 	} else if logServices == nil {
-		c.Log.Info("no log services found", "operation", "system.LogServices()")
+		c.Log.Debug("no log services found", "operation", "system.LogServices()")
 		return
 	}
 

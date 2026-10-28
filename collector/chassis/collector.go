@@ -101,7 +101,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 	// process the chassises
 	for _, chassis := range chassises {
-		chassisLogContext := c.Log.With("Chassis", chassis.ID)
+		chassisLogContext := c.Log.With("chassis", chassis.ID)
 		chassisLogContext.Info("collector scrape started")
 		ChassisLabelValues := []string{"chassis", chassis.ID}
 		if chassisStatusHealthValue, ok := common.ParseCommonStatusHealth(chassis.Status.Health); ok {
@@ -126,18 +126,18 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 			}
 		}
 
-		thermal := thermal.NewCollector(c.Ctx, c.Log, chassis)
+		thermal := thermal.NewCollector(c.Ctx, chassisLogContext, chassis)
 		wg.Go(func() { thermal.Collect(ch) })
 
 		// Power() was deprecated in Redfish v1.15.0
-		power := power.NewCollector(c.Ctx, c.Log, chassis)
+		power := power.NewCollector(c.Ctx, chassisLogContext, chassis)
 		wg.Go(func() { power.Collect(ch) })
 
 		// It was replaced with PowerSubsystem()
-		power_subsystem := power_subsystem.NewCollector(c.Ctx, c.Log, chassis)
+		power_subsystem := power_subsystem.NewCollector(c.Ctx, chassisLogContext, chassis)
 		wg.Go(func() { power_subsystem.Collect(ch) })
 
-		network_adapters := network_adapters.NewCollector(c.Ctx, c.Log, chassis)
+		network_adapters := network_adapters.NewCollector(c.Ctx, chassisLogContext, chassis)
 		wg.Go(func() { network_adapters.Collect(ch) })
 
 		// process log services
@@ -157,7 +157,7 @@ func (c* Collector) collectLogs(ch chan<- prometheus.Metric, chassis *schemas.Ch
 		c.Log.Error("error getting log services from chassis", "operation", "chassis.LogServices()", "err", err)
 		return
 	} else if logServices == nil {
-		c.Log.Info("no log services found", "operation", "chassis.LogServices()")
+		c.Log.Debug("no log services found", "operation", "chassis.LogServices()")
 		return
 	}
 

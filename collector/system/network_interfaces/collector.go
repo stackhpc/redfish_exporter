@@ -64,7 +64,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		c.Log.Error("error getting network interface data from system", "operation", "system.NetworkInterfaces()", "err", err)
 		return
 	} else if networkInterfaces == nil {
-		c.Log.Info("no network interface data found", "operation", "system.NetworkInterfaces()")
+		c.Log.Debug("no network interface data found", "operation", "system.NetworkInterfaces()")
 		return
 	}
 

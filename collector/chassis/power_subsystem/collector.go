@@ -68,7 +68,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		c.Log.Error("error getting power supplies from power subsystem", "operation", "powerSubsystem.PowerSupplies()", "err", err)
 		return
 	} else if powerSupplies == nil {
-		c.Log.Info("no power supplies found", "operation", "powerSubsystem.PowerSupplies()")
+		c.Log.Debug("no power supplies found", "operation", "powerSubsystem.PowerSupplies()")
 		return
 	}
 

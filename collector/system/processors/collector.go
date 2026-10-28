@@ -68,7 +68,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		c.Log.Error("error getting processor data from system", "operation", "system.Processors()", "err", err)
 		return
 	} else if processors == nil {
-		c.Log.Info("no processor data found", "operation", "system.Processors()")
+		c.Log.Debug("no processor data found", "operation", "system.Processors()")
 		return
 	}
 
