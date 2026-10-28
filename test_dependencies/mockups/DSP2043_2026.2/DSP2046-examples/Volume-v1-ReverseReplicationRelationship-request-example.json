@@ -1,4 +1,0 @@
-{
-    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
-    "TargetVolume": "/redfish/v1/Storage/1/StoragePools/PrimaryPool/AllocatedVolumes/650973452245"
-}

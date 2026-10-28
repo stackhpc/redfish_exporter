@@ -1,5 +1,0 @@
-{
-    "@Redfish.Copyright": "Copyright 2014-2026 DMTF. For the full DMTF copyright policy, see http://www.dmtf.org/about/policies/copyright.",
-    "Algorithm": "HMAC_SHA384",
-    "Key": "5365637265744B6579"
-}
