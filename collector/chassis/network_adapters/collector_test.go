@@ -11,7 +11,7 @@ import (
 )
 
 func TestPublicTower_2026_2(t *testing.T) {
-	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-tower", false)
+	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-tower")
 
 	chassis, err := redfishClient.Service.Chassis()
 	require.NoError(t, err)
@@ -40,7 +40,7 @@ func TestPublicTower_2026_2(t *testing.T) {
 }
 
 func TestPublicACD_2026_2(t *testing.T) {
-	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-acd", false)
+	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-acd")
 
 	chassis, err := redfishClient.Service.Chassis()
 	require.NoError(t, err)

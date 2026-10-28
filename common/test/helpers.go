@@ -18,7 +18,7 @@ import (
 	"github.com/testcontainers/testcontainers-go/wait"
 )
 
-func CreateRedfishClient(t *testing.T, path string, collect_logs bool) *gofish.APIClient {
+func CreateRedfishClient(t *testing.T, path string) *gofish.APIClient {
 	ctx := context.Background()
 	container, err := testcontainers.Run(
 		ctx, "",

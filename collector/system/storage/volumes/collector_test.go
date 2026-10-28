@@ -11,7 +11,7 @@ import (
 )
 
 func TestPublicLocalStorage_2026_2(t *testing.T) {
-	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-localstorage", false)
+	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-localstorage")
 
 	systems, err := redfishClient.Service.Systems()
 	require.NoError(t, err)
