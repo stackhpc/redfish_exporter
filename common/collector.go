@@ -87,18 +87,18 @@ func ParseLogService(ch chan<- prometheus.Metric, metrics map[string]Metric, ctx
 }
 
 func ParseLogEntry(ch chan<- prometheus.Metric, desc *prometheus.Desc, collectorID, logServiceName, logServiceID string, logEntry *schemas.LogEntry) {
-	logEntryName := logEntry.Name
-	logEntryID := logEntry.ID
 	logEntryCode := string(logEntry.EntryCode)
 	logEntryType := string(logEntry.EntryType)
-	logEntryMessageID := logEntry.MessageID
-	logEntrySensorNumber := fmt.Sprint(logEntry.SensorNumber)
 	logEntrySensorType := string(logEntry.SensorType)
-	logEntrySeverityState := logEntry.Severity
 
-	logEntryLabelValues := []string{collectorID, logServiceName, logServiceID, logEntryName, logEntryID, logEntryCode, logEntryType, logEntryMessageID, logEntrySensorNumber, logEntrySensorType}
+	sensorNumber := ""
+	if logEntry.SensorNumber != nil {
+		sensorNumber = fmt.Sprintf("%d", *logEntry.SensorNumber)
+	}
 
-	if logEntrySeverityStateValue, ok := ParseCommonSeverityState(logEntrySeverityState); ok {
+	logEntryLabelValues := []string{collectorID, logServiceName, logServiceID, logEntry.Name, logEntry.ID, logEntryCode, logEntryType, logEntry.MessageID, sensorNumber, logEntrySensorType}
+
+	if logEntrySeverityStateValue, ok := ParseCommonSeverityState(logEntry.Severity); ok {
 		ch <- prometheus.MustNewConstMetric(desc, prometheus.GaugeValue, logEntrySeverityStateValue, logEntryLabelValues...)
 	}
 }
