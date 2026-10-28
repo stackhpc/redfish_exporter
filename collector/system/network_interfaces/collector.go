@@ -13,7 +13,7 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemNetworkInterfaceLabelNames  = []string{"hostname", "resource", "network_interface", "network_interface_id"}
+	SystemNetworkInterfaceLabelNames = []string{"hostname", "resource", "network_interface", "network_interface_id"}
 
 	metricMap = createMetricMap()
 )
@@ -29,15 +29,15 @@ func createMetricMap() map[string]common.Metric {
 
 // Implements the prometheus.Collector.
 type Collector struct {
-	Ctx     *common.CollectionContext
-	Log     *slog.Logger
-	system  *schemas.ComputerSystem
+	Ctx    *common.CollectionContext
+	Log    *slog.Logger
+	system *schemas.ComputerSystem
 }
 
 // NewCollector returns a collector that collects system memory data
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, system *schemas.ComputerSystem) *Collector {
 	return &Collector{
-		Ctx:     ctx,
+		Ctx: ctx,
 		Log: logger.With(
 			"collector", Subsystem,
 			"system", system.ID,
@@ -70,7 +70,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 	wg := &sync.WaitGroup{}
 	for _, networkInterface := range networkInterfaces {
-		wg.Go(func() {c.parseNetworkInterface(ch, networkInterface)})
+		wg.Go(func() { c.parseNetworkInterface(ch, networkInterface) })
 	}
 	wg.Wait()
 }

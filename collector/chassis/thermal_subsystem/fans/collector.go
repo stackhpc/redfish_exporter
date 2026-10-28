@@ -33,12 +33,12 @@ type Collector struct {
 // NewCollector returns a collector that collects thermal subsystem fan data
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassisID *string, thermalSubsystem *schemas.ThermalSubsystem) *Collector {
 	return &Collector{
-		Ctx:     ctx,
+		Ctx: ctx,
 		Log: logger.With(
 			"collector", Subsystem,
 		),
 		thermalSubsystem: thermalSubsystem,
-		chassisID: chassisID,
+		chassisID:        chassisID,
 	}
 }
 

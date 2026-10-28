@@ -47,7 +47,7 @@ func createMetricMap() map[string]common.Metric {
 // NewCollector returns a collector that collecting memory statistics
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector {
 	return &Collector{
-		Ctx:     ctx,
+		Ctx: ctx,
 		Log: logger.With(
 			"collector", "ManagerCollector",
 		),

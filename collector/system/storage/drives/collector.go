@@ -30,21 +30,21 @@ func createMetricMap() map[string]common.Metric {
 
 // Implements the prometheus.Collector.
 type Collector struct {
-	Ctx     *common.CollectionContext
-	Log     *slog.Logger
-	storage *schemas.Storage
+	Ctx      *common.CollectionContext
+	Log      *slog.Logger
+	storage  *schemas.Storage
 	hostname *string
 }
 
 // NewCollector returns a collector that collects storage volume data
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *schemas.Storage, hostname *string) *Collector {
 	return &Collector{
-		Ctx:     ctx,
+		Ctx: ctx,
 		Log: logger.With(
 			"collector", Subsystem,
 			"storage", storage.ID,
 		),
-		storage: storage,
+		storage:  storage,
 		hostname: hostname,
 	}
 }

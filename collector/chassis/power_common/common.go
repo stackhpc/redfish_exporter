@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	Subsystem                     = "chassis"
-	ChassisPowerSupplyLabelNames  = []string{"resource", "chassis_id", "power_supply", "power_supply_id"}
+	Subsystem                    = "chassis"
+	ChassisPowerSupplyLabelNames = []string{"resource", "chassis_id", "power_supply", "power_supply_id"}
 
 	metricMap = createMetricMap()
 )

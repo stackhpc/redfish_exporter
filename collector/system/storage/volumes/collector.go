@@ -30,23 +30,23 @@ func createMetricMap() map[string]common.Metric {
 
 // Implements the prometheus.Collector.
 type Collector struct {
-	Ctx      *common.CollectionContext
-	Log      *slog.Logger
-	storage  *schemas.Storage
-	hostname *string
+	Ctx                *common.CollectionContext
+	Log                *slog.Logger
+	storage            *schemas.Storage
+	hostname           *string
 	volumeDeduplicator *VolumeDeduplicator
 }
 
 // NewCollector returns a collector that collects storage volume data
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *schemas.Storage, hostname *string, volumeDeduplicator *VolumeDeduplicator) *Collector {
 	return &Collector{
-		Ctx:     ctx,
+		Ctx: ctx,
 		Log: logger.With(
 			"collector", Subsystem,
 			"storage", storage.ID,
 		),
-		storage:  storage,
-		hostname: hostname,
+		storage:            storage,
+		hostname:           hostname,
 		volumeDeduplicator: volumeDeduplicator,
 	}
 }
@@ -101,7 +101,7 @@ func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *sch
 
 type VolumeDeduplicator struct {
 	seenVolumes map[string]any
-	mu sync.Mutex
+	mu          sync.Mutex
 }
 
 // Returns whether the volume was previously unseen
@@ -120,7 +120,7 @@ func (d *VolumeDeduplicator) SetVolumeIsSeen(volume *schemas.Volume) bool {
 }
 
 func NewVolumeDeduplicator() VolumeDeduplicator {
-	return VolumeDeduplicator {
+	return VolumeDeduplicator{
 		seenVolumes: make(map[string]any),
 	}
 }

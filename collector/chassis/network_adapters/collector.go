@@ -44,7 +44,7 @@ type Collector struct {
 // NewCollector returns a collector that collects chassis network adapter data
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassis *schemas.Chassis) *Collector {
 	return &Collector{
-		Ctx:     ctx,
+		Ctx: ctx,
 		Log: logger.With(
 			"collector", Subsystem,
 		),
@@ -148,7 +148,7 @@ func (c *Collector) parseNetworkPort(ch chan<- prometheus.Metric, networkPort *s
 	chassisNetworkPortLabelValues := []string{"network_port", c.chassis.ID, networkAdapterName, networkAdapterID, networkPort.Name, networkPort.ID, string(networkPortLinkType), string(networkPortConnectionType), networkPort.PhysicalPortNumber}
 
 	if networkPort.CurrentLinkSpeedMbps != nil {
-		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_link_speed_gbps"].Desc, prometheus.GaugeValue, float64(*networkPort.CurrentLinkSpeedMbps) / 1000.0, chassisNetworkPortLabelValues...)
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_link_speed_gbps"].Desc, prometheus.GaugeValue, float64(*networkPort.CurrentLinkSpeedMbps)/1000.0, chassisNetworkPortLabelValues...)
 	}
 
 	if linkStatus, ok := parseNetworkPortLinkStatus(networkPort.LinkStatus); ok {
