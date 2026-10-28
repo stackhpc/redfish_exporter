@@ -13,20 +13,11 @@ import (
 
 var (
 	Subsystem = "chassis"
-
-	metricMap = createMetricMap()
 )
-
-func createMetricMap() map[string]common.Metric {
-	metrics := make(map[string]common.Metric)
-
-	return metrics
-}
 
 // Implements the prometheus.Collector.
 type Collector struct {
 	Ctx     *common.CollectionContext
-	metrics map[string]common.Metric
 	Log     *slog.Logger
 	chassis *schemas.Chassis
 }
@@ -34,7 +25,6 @@ type Collector struct {
 // NewCollector returns a collector that collects chassis thermal data
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassis *schemas.Chassis) *Collector {
 	return &Collector{
-		metrics: metricMap,
 		Ctx:     ctx,
 		Log: logger.With(
 			"collector", Subsystem,
@@ -44,10 +34,14 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassis *s
 }
 
 // Describe implemented prometheus.Collector
+func Describe(ch chan<- *prometheus.Desc) {
+	fans.Describe(ch)
+	thermal_metrics.Describe(ch)
+}
+
+// Describe implemented prometheus.Collector
 func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
-	for _, metric := range c.metrics {
-		ch <- metric.Desc
-	}
+	Describe(ch)
 }
 
 // Given a chassis, collect data from its ThermalSubsystem

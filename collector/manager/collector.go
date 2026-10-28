@@ -20,35 +20,33 @@ var (
 	ManagerLogServiceLabelNames = []string{"manager_id", "log_service", "log_service_id", "log_service_enabled", "log_service_overwrite_policy"}
 	ManagerLogEntryLabelNames   = []string{"manager_id", "log_service", "log_service_id", "log_entry", "log_entry_id", "log_entry_code", "log_entry_type", "log_entry_message_id", "log_entry_sensor_number", "log_entry_sensor_type"}
 
-	metricMap = createManagerMetricMap()
+	metricMap = createMetricMap()
 )
 
 // Collector implements the prometheus.Collector.
 type Collector struct {
 	Ctx                   *common.CollectionContext
-	metrics               map[string]common.Metric
 	collectorScrapeStatus *prometheus.GaugeVec
 	Log                   *slog.Logger
 }
 
-func createManagerMetricMap() map[string]common.Metric {
-	managerMetrics := make(map[string]common.Metric)
-	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "state", fmt.Sprintf("manager state,%s", common.StateHelp), ManagerLabelNames)
-	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "health_state", fmt.Sprintf("manager health,%s", common.HealthHelp), ManagerLabelNames)
-	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "power_state", "manager power state", ManagerLabelNames)
-	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "firmware_info", "manager firmware version, value is always 1", ManagerFirmwareLabelNames)
+func createMetricMap() map[string]common.Metric {
+	metrics := make(map[string]common.Metric)
+	common.AddToMetricMap(metrics, ManagerSubmanager, "state", fmt.Sprintf("manager state,%s", common.StateHelp), ManagerLabelNames)
+	common.AddToMetricMap(metrics, ManagerSubmanager, "health_state", fmt.Sprintf("manager health,%s", common.HealthHelp), ManagerLabelNames)
+	common.AddToMetricMap(metrics, ManagerSubmanager, "power_state", "manager power state", ManagerLabelNames)
+	common.AddToMetricMap(metrics, ManagerSubmanager, "firmware_info", "manager firmware version, value is always 1", ManagerFirmwareLabelNames)
 
-	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "log_service_state", fmt.Sprintf("manager log service state,%s", common.StateHelp), ManagerLogServiceLabelNames)
-	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "log_service_health_state", fmt.Sprintf("manager log service health state,%s", common.HealthHelp), ManagerLogServiceLabelNames)
-	common.AddToMetricMap(managerMetrics, ManagerSubmanager, "log_entry_severity_state", fmt.Sprintf("manager log entry severity state,%s", common.SeverityHelp), ManagerLogEntryLabelNames)
+	common.AddToMetricMap(metrics, ManagerSubmanager, "log_service_state", fmt.Sprintf("manager log service state,%s", common.StateHelp), ManagerLogServiceLabelNames)
+	common.AddToMetricMap(metrics, ManagerSubmanager, "log_service_health_state", fmt.Sprintf("manager log service health state,%s", common.HealthHelp), ManagerLogServiceLabelNames)
+	common.AddToMetricMap(metrics, ManagerSubmanager, "log_entry_severity_state", fmt.Sprintf("manager log entry severity state,%s", common.SeverityHelp), ManagerLogEntryLabelNames)
 
-	return managerMetrics
+	return metrics
 }
 
 // NewCollector returns a collector that collecting memory statistics
 func NewCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector {
 	return &Collector{
-		metrics: metricMap,
 		Ctx:     ctx,
 		Log: logger.With(
 			"collector", "ManagerCollector",
@@ -66,7 +64,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector
 
 // Describe implemented prometheus.Collector
 func (m *Collector) Describe(ch chan<- *prometheus.Desc) {
-	for _, metric := range m.metrics {
+	for _, metric := range metricMap {
 		ch <- metric.Desc
 	}
 	m.collectorScrapeStatus.Describe(ch)

@@ -93,10 +93,18 @@ func SetLogLevel() {
 	slog.SetLogLoggerLevel(level)
 }
 
+type ErrorLogger struct {
+	logger *slog.Logger
+}
+
+func (l *ErrorLogger) Println(v ...any) {
+	l.logger.Error("Error during gathering", v...)
+}
+
 // define new http handleer
 func metricsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		registry := prometheus.NewRegistry()
+		registry := prometheus.NewPedanticRegistry()
 		target := r.URL.Query().Get("target")
 		if target == "" {
 			http.Error(w, "'target' parameter must be specified", 400)
@@ -152,8 +160,13 @@ func metricsHandler() http.HandlerFunc {
 			prometheus.DefaultGatherer,
 			registry,
 		}
+
+		errorLogger := ErrorLogger{
+			logger: targetLoggerCtx,
+		}
+
 		// Delegate http serving to Prometheus client library, which will call collector.Collect.
-		h := promhttp.HandlerFor(gatherers, promhttp.HandlerOpts{})
+		h := promhttp.HandlerFor(gatherers, promhttp.HandlerOpts{ErrorLog: &errorLogger})
 		h.ServeHTTP(w, r)
 
 	}

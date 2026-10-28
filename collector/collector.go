@@ -32,6 +32,12 @@ var (
 		"Collector time duration.",
 		nil, nil,
 	)
+	upDesc = prometheus.NewDesc(
+		prometheus.BuildFQName(namespace, "", "up"),
+		"redfish up",
+		nil,
+		nil,
+	)
 )
 
 // RedfishCollector collects redfish metrics. It implements prometheus.Collector.
@@ -69,7 +75,8 @@ func (r *RedfishCollector) Describe(ch chan<- *prometheus.Desc) {
 	for _, collector := range r.collectors {
 		collector.Describe(ch)
 	}
-
+	ch <- totalScrapeDurationDesc
+	ch <- upDesc
 }
 
 // Collect implements prometheus.Collector.
