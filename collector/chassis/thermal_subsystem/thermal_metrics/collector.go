@@ -5,25 +5,10 @@ import (
 	"sync"
 
 	"github.com/prometheus/client_golang/prometheus"
+	"github.com/stackhpc/redfish_exporter/collector/chassis/thermal_common"
 	"github.com/stackhpc/redfish_exporter/common"
 	"github.com/stmcginnis/gofish/schemas"
 )
-
-var (
-	Subsystem = "chassis"
-
-	TemperatureLabelNames = []string{"resource", "chassis_id", "sensor", "sensor_id"}
-
-	metricMap = createMetricMap()
-)
-
-func createMetricMap() map[string]common.Metric {
-	metrics := make(map[string]common.Metric)
-
-	common.AddToMetricMap(metrics, Subsystem, "temperature_celsius", "celsius of temperature on this chassis component", TemperatureLabelNames)
-
-	return metrics
-}
 
 // Implements the prometheus.Collector.
 type Collector struct {
@@ -38,7 +23,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassisID 
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "chassis.thermal_subsystem.thermal_metrics",
 		),
 		thermalSubsystem: thermalSubsystem,
 		chassisID:        chassisID,
@@ -47,9 +32,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassisID 
 
 // Describe implemented prometheus.Collector
 func Describe(ch chan<- *prometheus.Desc) {
-	for _, metric := range metricMap {
-		ch <- metric.Desc
-	}
+	thermal_common.Describe(ch)
 }
 
 // Describe implemented prometheus.Collector
@@ -77,6 +60,6 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 func (c *Collector) parseTemperatureReading(ch chan<- prometheus.Metric, reading schemas.SensorArrayExcerpt) {
 	chassisTemperatureLabelvalues := []string{"temperature", *c.chassisID, reading.DeviceName, reading.DataSourceURI}
 	if reading.Reading != nil {
-		ch <- prometheus.MustNewConstMetric(metricMap["chassis_temperature_celsius"].Desc, prometheus.GaugeValue, float64(*reading.Reading), chassisTemperatureLabelvalues...)
+		ch <- prometheus.MustNewConstMetric(thermal_common.MetricMap["chassis_temperature_celsius"].Desc, prometheus.GaugeValue, float64(*reading.Reading), chassisTemperatureLabelvalues...)
 	}
 }
