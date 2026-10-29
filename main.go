@@ -21,8 +21,6 @@ import (
 	"github.com/stackhpc/redfish_exporter/common"
 )
 
-import _ "net/http/pprof"
-
 var (
 	Version       string
 	BuildRevision string
