@@ -13,8 +13,7 @@ import (
 )
 
 var (
-	Subsystem                     = "chassis"
-	ChassisPowerVoltageLabelNames = []string{"resource", "chassis_id", "power_voltage", "power_voltage_id"}
+	Subsystem = "chassis"
 
 	metricMap = createMetricMap()
 )
@@ -22,9 +21,7 @@ var (
 func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
-	common.AddToMetricMap(metrics, Subsystem, "power_voltage_state", fmt.Sprintf("power voltage state of chassis component,%s", common.StateHelp), ChassisPowerVoltageLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "power_voltage_volts", "power voltage volts number of chassis component", ChassisPowerVoltageLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "power_average_consumed_watts", "power wattage watts number of chassis component", ChassisPowerVoltageLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "power_voltage_state", fmt.Sprintf("power voltage state of chassis component,%s", common.StateHelp), power_common.ChassisPowerLabelNames)
 
 	return metrics
 }
@@ -95,11 +92,13 @@ func parseVoltage(ch chan<- prometheus.Metric, chassisID string, voltageInfo sch
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_power_voltage_state"].Desc, prometheus.GaugeValue, chassisPowerInfoVoltageStateValue, labelValues...)
 	}
 	if voltageInfo.ReadingVolts != nil {
-		ch <- prometheus.MustNewConstMetric(metricMap["chassis_power_voltage_volts"].Desc, prometheus.GaugeValue, float64(*voltageInfo.ReadingVolts), labelValues...)
+		ch <- prometheus.MustNewConstMetric(power_common.MetricMap["chassis_power_voltage_volts"].Desc, prometheus.GaugeValue, float64(*voltageInfo.ReadingVolts), labelValues...)
 	}
 }
 
 func parsePowerControl(ch chan<- prometheus.Metric, chassisID string, powerControl schemas.PowerControl) {
 	labelValues := []string{"power_wattage", chassisID, powerControl.Name, powerControl.MemberID}
-	ch <- prometheus.MustNewConstMetric(metricMap["chassis_power_average_consumed_watts"].Desc, prometheus.GaugeValue, float64(*powerControl.PowerMetrics.AverageConsumedWatts), labelValues...)
+	if powerControl.PowerMetrics.AverageConsumedWatts != nil {
+		ch <- prometheus.MustNewConstMetric(power_common.MetricMap["chassis_power_average_consumed_watts"].Desc, prometheus.GaugeValue, float64(*powerControl.PowerMetrics.AverageConsumedWatts), labelValues...)
+	}
 }

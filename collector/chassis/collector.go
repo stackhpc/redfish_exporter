@@ -10,6 +10,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stmcginnis/gofish/schemas"
 
+	"github.com/stackhpc/redfish_exporter/collector/chassis/environment_metrics"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/network_adapters"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/power"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/power_subsystem"
@@ -122,6 +123,10 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		// It was replaced with PowerSubsystem()
 		power_subsystem := power_subsystem.NewCollector(c.Ctx, chassisLogContext, chassis)
 		wg.Go(func() { power_subsystem.Collect(ch) })
+
+		// Some metrics were also moved to EnvironmentMetrics
+		environment_metrics := environment_metrics.NewCollector(c.Ctx, chassisLogContext, chassis)
+		wg.Go(func() { environment_metrics.Collect(ch) })
 
 		network_adapters := network_adapters.NewCollector(c.Ctx, chassisLogContext, chassis)
 		wg.Go(func() { network_adapters.Collect(ch) })
