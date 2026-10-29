@@ -13,7 +13,7 @@ BRANCH ?=$(shell git rev-parse --abbrev-ref HEAD)
 TIME ?=$(shell date --rfc-3339=seconds)
 DOCKER := $(shell { command -v podman || command -v docker; } 2>/dev/null)
 
-all:  fmt style build docker-build
+all:  fmt style build test docker-build
 
 style:
 	@echo ">> checking code style"
@@ -32,6 +32,10 @@ check_license:
 build: |
 	@echo ">> building binaries"
 	$(GO) build -o build/redfish_exporter -ldflags  '-X "main.Version=$(VERSION)" -X  "main.BuildRevision=$(REVISION)" -X  "main.BuildBranch=$(BRANCH)" -X "main.BuildTime=$(TIME)"'
+
+test: |
+	@echo ">> testing"
+	FIXTURES_DIR="$(shell pwd)/test_dependencies" $(GO) test -race ./...
 
 docker-build:
 	$(DOCKER) build -t stackhpc/redfish_exporter --network=host .
