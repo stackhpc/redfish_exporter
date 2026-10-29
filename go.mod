@@ -7,7 +7,7 @@ require (
 	github.com/prometheus/client_golang v1.25.0
 	github.com/prometheus/common v0.72.1
 	github.com/prometheus/exporter-toolkit v0.20.0
-	github.com/stmcginnis/gofish v0.27.1-0.20261026130946-d7d356af0d92
+	github.com/stmcginnis/gofish v0.27.1-0.20261029114715-29f592052597
 	github.com/stretchr/testify v1.12.1
 	github.com/testcontainers/testcontainers-go v0.44.0
 	gopkg.in/yaml.v2 v2.4.0

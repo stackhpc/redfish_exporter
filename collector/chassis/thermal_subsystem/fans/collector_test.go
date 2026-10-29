@@ -28,23 +28,26 @@ func TestPublicTower_2026_2(t *testing.T) {
 
 	collector := fans.NewCollector(&ctx, logger, &chassis[0].ID, thermalSubsystem)
 	expected := `
-		redfish_chassis_fan_health{chassis_id="Tower",fan="Fan Bay 1",fan_id="",fan_unit="",resource="fan"} 1
-       	redfish_chassis_fan_health{chassis_id="Tower",fan="Fan Bay 2",fan_id="",fan_unit="",resource="fan"} 1
-       	redfish_chassis_fan_health{chassis_id="Tower",fan="Fan for CPU 1",fan_id="",fan_unit="",resource="fan"} 1
-       	redfish_chassis_fan_health{chassis_id="Tower",fan="Fan for CPU 2",fan_id="",fan_unit="",resource="fan"} 1
-       	redfish_chassis_fan_state{chassis_id="Tower",fan="Fan Bay 1",fan_id="",fan_unit="",resource="fan"} 1
-       	redfish_chassis_fan_state{chassis_id="Tower",fan="Fan Bay 2",fan_id="",fan_unit="",resource="fan"} 1
-       	redfish_chassis_fan_state{chassis_id="Tower",fan="Fan for CPU 1",fan_id="",fan_unit="",resource="fan"} 1
-       	redfish_chassis_fan_state{chassis_id="Tower",fan="Fan for CPU 2",fan_id="",fan_unit="",resource="fan"} 1
+		redfish_chassis_fan_health{chassis_id="Tower",fan="Fan Bay 1",fan_id="Bay1",resource="fan"} 1
+       	redfish_chassis_fan_health{chassis_id="Tower",fan="Fan Bay 2",fan_id="Bay2",resource="fan"} 1
+       	redfish_chassis_fan_health{chassis_id="Tower",fan="Fan for CPU 1",fan_id="CPU1",resource="fan"} 1
+       	redfish_chassis_fan_health{chassis_id="Tower",fan="Fan for CPU 2",fan_id="CPU2",resource="fan"} 1
+       	redfish_chassis_fan_rpm_percentage{chassis_id="Tower",fan="Fan Bay 1",fan_id="Bay1",resource="fan"} 45
+       	redfish_chassis_fan_rpm_percentage{chassis_id="Tower",fan="Fan Bay 2",fan_id="Bay2",resource="fan"} 45
+       	redfish_chassis_fan_rpm_percentage{chassis_id="Tower",fan="Fan for CPU 1",fan_id="CPU1",resource="fan"} 45
+       	redfish_chassis_fan_rpm_percentage{chassis_id="Tower",fan="Fan for CPU 2",fan_id="CPU2",resource="fan"} 45
+       	redfish_chassis_fan_rpm{chassis_id="Tower",fan="Fan Bay 1",fan_id="Bay1",resource="fan"} 2200
+       	redfish_chassis_fan_rpm{chassis_id="Tower",fan="Fan Bay 2",fan_id="Bay2",resource="fan"} 2400
+       	redfish_chassis_fan_rpm{chassis_id="Tower",fan="Fan for CPU 2",fan_id="CPU2",resource="fan"} 1490
+       	redfish_chassis_fan_state{chassis_id="Tower",fan="Fan Bay 1",fan_id="Bay1",resource="fan"} 1
+       	redfish_chassis_fan_state{chassis_id="Tower",fan="Fan Bay 2",fan_id="Bay2",resource="fan"} 1
+       	redfish_chassis_fan_state{chassis_id="Tower",fan="Fan for CPU 1",fan_id="CPU1",resource="fan"} 1
+       	redfish_chassis_fan_state{chassis_id="Tower",fan="Fan for CPU 2",fan_id="CPU2",resource="fan"} 1
 	`
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_chassis_fan_health",
-		// Modern fans are incompatible with the ThermalFan type currently used by gofish.
-		// "redfish_chassis_fan_rpm_lower_threshold_fatal",
-		// "redfish_chassis_fan_rpm_max",
-		// "redfish_chassis_fan_rpm_min",
-		// "redfish_chassis_fan_rpm_percentage",
-		// "redfish_chassis_fan_rpm",
+		"redfish_chassis_fan_rpm_percentage",
+		"redfish_chassis_fan_rpm",
 		"redfish_chassis_fan_state",
 	)
 }

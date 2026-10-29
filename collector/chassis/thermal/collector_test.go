@@ -25,20 +25,20 @@ func TestDSP2043_1_0_0(t *testing.T) {
 
 	collector := thermal.NewCollector(&ctx, logger, chassis[0])
 	expected := `
-		redfish_chassis_fan_health{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",fan_unit="rpm",resource="fan"} 1
-       	redfish_chassis_fan_health{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",fan_unit="rpm",resource="fan"} 1
-       	redfish_chassis_fan_rpm_lower_threshold_fatal{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",fan_unit="rpm",resource="fan"} 0
-       	redfish_chassis_fan_rpm_lower_threshold_fatal{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",fan_unit="rpm",resource="fan"} 0
-       	redfish_chassis_fan_rpm_max{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",fan_unit="rpm",resource="fan"} 5000
-       	redfish_chassis_fan_rpm_max{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",fan_unit="rpm",resource="fan"} 5000
-       	redfish_chassis_fan_rpm_min{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",fan_unit="rpm",resource="fan"} 0
-       	redfish_chassis_fan_rpm_min{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",fan_unit="rpm",resource="fan"} 0
-       	redfish_chassis_fan_rpm_percentage{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",fan_unit="rpm",resource="fan"} 41
-       	redfish_chassis_fan_rpm_percentage{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",fan_unit="rpm",resource="fan"} 42
-       	redfish_chassis_fan_rpm{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",fan_unit="rpm",resource="fan"} 2050
-       	redfish_chassis_fan_rpm{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",fan_unit="rpm",resource="fan"} 2100
-       	redfish_chassis_fan_state{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",fan_unit="rpm",resource="fan"} 1
-       	redfish_chassis_fan_state{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",fan_unit="rpm",resource="fan"} 1
+		redfish_chassis_fan_health{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",resource="fan"} 1
+       	redfish_chassis_fan_health{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",resource="fan"} 1
+       	redfish_chassis_fan_rpm_lower_threshold_fatal{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",resource="fan"} 0
+       	redfish_chassis_fan_rpm_lower_threshold_fatal{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",resource="fan"} 0
+       	redfish_chassis_fan_rpm_max{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",resource="fan"} 5000
+       	redfish_chassis_fan_rpm_max{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",resource="fan"} 5000
+       	redfish_chassis_fan_rpm_min{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",resource="fan"} 0
+       	redfish_chassis_fan_rpm_min{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",resource="fan"} 0
+       	redfish_chassis_fan_rpm_percentage{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",resource="fan"} 41
+       	redfish_chassis_fan_rpm_percentage{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",resource="fan"} 42
+       	redfish_chassis_fan_rpm{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",resource="fan"} 2050
+       	redfish_chassis_fan_rpm{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",resource="fan"} 2100
+       	redfish_chassis_fan_state{chassis_id="1U",fan="BaseBoard System Fan Backup",fan_id="1",resource="fan"} 1
+       	redfish_chassis_fan_state{chassis_id="1U",fan="BaseBoard System Fan",fan_id="0",resource="fan"} 1
        	redfish_chassis_temperature_celsius{chassis_id="1U",resource="temperature",sensor="CPU1 Temp",sensor_id="0"} 41
        	redfish_chassis_temperature_celsius{chassis_id="1U",resource="temperature",sensor="Chassis Intake Temp",sensor_id="2"} 25
        	redfish_chassis_temperature_sensor_health{chassis_id="1U",resource="temperature",sensor="CPU1 Temp",sensor_id="0"} 1

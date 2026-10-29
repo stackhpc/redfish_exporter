@@ -107,8 +107,13 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 		wg.Go(func() { c.collectChassis(ch, chassis) })
 
+		// Thermal() was deprecated in Redfish v1.15.0
 		thermal := thermal.NewCollector(c.Ctx, chassisLogContext, chassis)
 		wg.Go(func() { thermal.Collect(ch) })
+
+		// It was replaced with ThermalSubsystem()
+		thermal_subsystem := thermal_subsystem.NewCollector(c.Ctx, chassisLogContext, chassis)
+		wg.Go(func() { thermal_subsystem.Collect(ch) })
 
 		// Power() was deprecated in Redfish v1.15.0
 		power := power.NewCollector(c.Ctx, chassisLogContext, chassis)
