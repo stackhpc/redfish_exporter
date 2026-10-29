@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
@@ -46,7 +47,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassis *s
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "chassis.network_adapters",
 		),
 		chassis: chassis,
 	}
@@ -65,8 +66,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
-	wg := &sync.WaitGroup{}
-
+	startTime := time.Now()
 	networkAdapters, err := c.chassis.NetworkAdapters()
 	if err != nil {
 		c.Log.Error("error getting network adapters data from chassis", "operation", "chassis.NetworkAdapters()", "err", err)
@@ -76,19 +76,16 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
+	wg := &sync.WaitGroup{}
 	for _, networkAdapter := range networkAdapters {
-		c.Log.Debug("Found network adapter", "location", networkAdapter.ODataID)
-		wg.Go(func() {
-			if err = c.parseNetworkAdapter(ch, networkAdapter); err != nil {
-				c.Log.Error("error getting network ports from network adapter", "operation", "chassis.NetworkAdapters()", "err", err)
-			}
-		})
+		wg.Go(func() { c.collectNetworkAdapter(ch, networkAdapter, c.Log.With("NetworkAdapter", networkAdapter.ID)) })
 	}
 
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
-func (c *Collector) parseNetworkAdapter(ch chan<- prometheus.Metric, networkAdapter *schemas.NetworkAdapter) error {
+func (c *Collector) collectNetworkAdapter(ch chan<- prometheus.Metric, networkAdapter *schemas.NetworkAdapter, logContext *slog.Logger) error {
 	chassisNetworkAdapterLabelValues := []string{"network_adapter", c.chassis.ID, networkAdapter.Name, networkAdapter.ID}
 	if networkAdapterStateValue, ok := common.ParseCommonStatusState(networkAdapter.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_adapter_state"].Desc, prometheus.GaugeValue, networkAdapterStateValue, chassisNetworkAdapterLabelValues...)
@@ -97,32 +94,46 @@ func (c *Collector) parseNetworkAdapter(ch chan<- prometheus.Metric, networkAdap
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_adapter_health_state"].Desc, prometheus.GaugeValue, networkAdapterHealthStateValue, chassisNetworkAdapterLabelValues...)
 	}
 
+	wg := &sync.WaitGroup{}
+
 	// NetworkPorts has been deprecated in Redfish v1.5.0
-	networkPorts, err := networkAdapter.NetworkPorts()
-	if err != nil {
-		return err
-	}
+	wg.Go(func() { c.collectNetworkPorts(ch, networkAdapter, logContext) })
 
 	// In favour of Ports
+	wg.Go(func() { c.collectPorts(ch, networkAdapter, logContext) })
+
+	wg.Wait()
+	return nil
+}
+
+func (c *Collector) collectPorts(ch chan<- prometheus.Metric, networkAdapter *schemas.NetworkAdapter, logContext *slog.Logger) {
 	ports, err := networkAdapter.Ports()
 	if err != nil {
-		return err
+		logContext.Error("error getting ports from network adapter", "operation", "networkAdapter.Ports()", "err", err)
+		return
 	}
 
 	wg := &sync.WaitGroup{}
+	for _, port := range ports {
+		logContext.Debug("Found port", "location", port.ODataID)
+		wg.Go(func() { c.parsePort(ch, port, networkAdapter.Name, networkAdapter.ID) })
+	}
+	wg.Wait()
+}
 
+func (c *Collector) collectNetworkPorts(ch chan<- prometheus.Metric, networkAdapter *schemas.NetworkAdapter, logContext *slog.Logger) {
+	networkPorts, err := networkAdapter.NetworkPorts()
+	if err != nil {
+		logContext.Error("error getting network ports from network adapter", "operation", "networkAdapter.NetworkPorts()", "err", err)
+		return
+	}
+
+	wg := sync.WaitGroup{}
 	for _, networkPort := range networkPorts {
 		c.Log.Debug("Found network port", "location", networkPort.ODataID)
 		wg.Go(func() { c.parseNetworkPort(ch, networkPort, networkAdapter.Name, networkAdapter.ID) })
 	}
-
-	for _, port := range ports {
-		c.Log.Debug("Found port", "location", port.ODataID)
-		wg.Go(func() { c.parsePort(ch, port, networkAdapter.Name, networkAdapter.ID) })
-	}
-
 	wg.Wait()
-	return nil
 }
 
 func parseNetworkPortLinkStatus(status schemas.NetworkPortLinkStatus) (float64, bool) {

@@ -3,6 +3,7 @@ package storage
 import (
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/collector/system/storage/drives"
@@ -36,7 +37,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, system *sc
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "system.storage",
 			"system", system.ID,
 		),
 		system: system,
@@ -59,6 +60,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	storages, err := c.system.Storage()
 	if err != nil {
 		c.Log.Error("error getting storage data from system", "operation", "system.Storage()", "err", err)
@@ -81,4 +83,5 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		wg.Go(func() { storageControllers.Collect(ch) })
 	}
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }

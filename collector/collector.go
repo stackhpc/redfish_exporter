@@ -81,7 +81,6 @@ func (r *RedfishCollector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements prometheus.Collector.
 func (r *RedfishCollector) Collect(ch chan<- prometheus.Metric) {
-
 	scrapeTime := time.Now()
 	if r.redfishClient != nil {
 		defer r.redfishClient.Logout()

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
@@ -41,7 +42,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *s
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "system.storage.drives",
 			"storage", storage.ID,
 		),
 		storage:  storage,
@@ -62,6 +63,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	drives, err := c.storage.Drives()
 	if err != nil {
 		c.Log.Error("error getting drive data from system", "operation", "system.Drives()", "err", err)
@@ -76,6 +78,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		wg.Go(func() { parseDrive(ch, *c.hostname, drive) })
 	}
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
 func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schemas.Drive) {

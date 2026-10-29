@@ -3,6 +3,7 @@ package common
 import (
 	"fmt"
 	"log/slog"
+	"time"
 
 	gofish "github.com/stmcginnis/gofish"
 )
@@ -25,11 +26,14 @@ type CollectionContext struct {
 }
 
 func NewCollectionContext(target string, hostconfig *HostConfig, logger *slog.Logger, collectLogs bool) (*CollectionContext, error) {
+	startTime := time.Now()
 	client, err := newRedfishClient(target, hostconfig.Username, hostconfig.Password)
 	if err != nil {
 		logger.Error("error creating redfish client", "err", err)
 		return nil, err
 	}
+	duration := time.Now().Sub(startTime)
+	logger.Debug("Created new client", "duration", duration)
 
 	logCount := hostconfig.Logcount
 	disabledMetrics := hostconfig.DisabledMetrics

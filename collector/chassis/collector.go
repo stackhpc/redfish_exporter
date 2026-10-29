@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stmcginnis/gofish/schemas"
@@ -88,6 +89,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implemented prometheus.Collector
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	service := c.Ctx.RedfishClient.Service
 
 	wg := &sync.WaitGroup{}
@@ -102,29 +104,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	// process the chassises
 	for _, chassis := range chassises {
 		chassisLogContext := c.Log.With("chassis", chassis.ID)
-		chassisLogContext.Info("collector scrape started")
-		ChassisLabelValues := []string{"chassis", chassis.ID}
-		if chassisStatusHealthValue, ok := common.ParseCommonStatusHealth(chassis.Status.Health); ok {
-			ch <- prometheus.MustNewConstMetric(metricMap["chassis_health"].Desc, prometheus.GaugeValue, chassisStatusHealthValue, ChassisLabelValues...)
-		}
-		if chassisStatusStateValue, ok := common.ParseCommonStatusState(chassis.Status.State); ok {
-			ch <- prometheus.MustNewConstMetric(metricMap["chassis_state"].Desc, prometheus.GaugeValue, chassisStatusStateValue, ChassisLabelValues...)
-		}
 
-		ChassisModelLabelValues := []string{"chassis", chassis.ID, chassis.Manufacturer, chassis.Model, chassis.PartNumber, chassis.SKU}
-		ch <- prometheus.MustNewConstMetric(metricMap["chassis_model_info"].Desc, prometheus.GaugeValue, 1, ChassisModelLabelValues...)
-
-		physicalSecurity := chassis.PhysicalSecurity
-		if physicalSecurity != (schemas.PhysicalSecurity{}) {
-			physicalSecurityIntrusionSensor := physicalSecurity.IntrusionSensor
-			physicalSecurityIntrusionSensorNumber := fmt.Sprint(physicalSecurity.IntrusionSensorNumber)
-			physicalSecurityIntrusionSensorReArmMethod := string(physicalSecurity.IntrusionSensorReArm)
-
-			if phySecIntrusionSensor, ok := parsePhySecIntrusionSensor(physicalSecurityIntrusionSensor); ok {
-				ChassisPhysicalSecurityLabelValues := []string{"physical_security", chassis.ID, physicalSecurityIntrusionSensorNumber, physicalSecurityIntrusionSensorReArmMethod}
-				ch <- prometheus.MustNewConstMetric(metricMap["chassis_physical_security_sensor_state"].Desc, prometheus.GaugeValue, phySecIntrusionSensor, ChassisPhysicalSecurityLabelValues...)
-			}
-		}
+		wg.Go(func() { c.collectChassis(ch, chassis) })
 
 		thermal := thermal.NewCollector(c.Ctx, chassisLogContext, chassis)
 		wg.Go(func() { thermal.Collect(ch) })
@@ -147,8 +128,33 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	wg.Wait()
-	c.Log.Info("collector scrape completed")
 	c.collectorScrapeStatus.WithLabelValues("chassis").Set(float64(1))
+	c.Log.Info("collection complete", "duration", time.Now().Sub(startTime))
+}
+
+func (c *Collector) collectChassis(ch chan<- prometheus.Metric, chassis *schemas.Chassis) {
+	ChassisLabelValues := []string{"chassis", chassis.ID}
+	if chassisStatusHealthValue, ok := common.ParseCommonStatusHealth(chassis.Status.Health); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_health"].Desc, prometheus.GaugeValue, chassisStatusHealthValue, ChassisLabelValues...)
+	}
+	if chassisStatusStateValue, ok := common.ParseCommonStatusState(chassis.Status.State); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_state"].Desc, prometheus.GaugeValue, chassisStatusStateValue, ChassisLabelValues...)
+	}
+
+	ChassisModelLabelValues := []string{"chassis", chassis.ID, chassis.Manufacturer, chassis.Model, chassis.PartNumber, chassis.SKU}
+	ch <- prometheus.MustNewConstMetric(metricMap["chassis_model_info"].Desc, prometheus.GaugeValue, 1, ChassisModelLabelValues...)
+
+	physicalSecurity := chassis.PhysicalSecurity
+	if physicalSecurity != (schemas.PhysicalSecurity{}) {
+		physicalSecurityIntrusionSensor := physicalSecurity.IntrusionSensor
+		physicalSecurityIntrusionSensorNumber := fmt.Sprint(physicalSecurity.IntrusionSensorNumber)
+		physicalSecurityIntrusionSensorReArmMethod := string(physicalSecurity.IntrusionSensorReArm)
+
+		if phySecIntrusionSensor, ok := parsePhySecIntrusionSensor(physicalSecurityIntrusionSensor); ok {
+			ChassisPhysicalSecurityLabelValues := []string{"physical_security", chassis.ID, physicalSecurityIntrusionSensorNumber, physicalSecurityIntrusionSensorReArmMethod}
+			ch <- prometheus.MustNewConstMetric(metricMap["chassis_physical_security_sensor_state"].Desc, prometheus.GaugeValue, phySecIntrusionSensor, ChassisPhysicalSecurityLabelValues...)
+		}
+	}
 }
 
 func (c *Collector) collectLogs(ch chan<- prometheus.Metric, chassis *schemas.Chassis) {

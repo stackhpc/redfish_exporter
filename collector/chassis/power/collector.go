@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/power_common"
@@ -40,7 +41,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassis *s
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "chassis.power",
 		),
 		chassis: chassis,
 	}
@@ -60,6 +61,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	powerInfo, err := c.chassis.Power()
 	if err != nil {
 		c.Log.Error("error getting power data from chassis", "operation", "chassis.Power()", "err", err)
@@ -84,6 +86,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
 func parseVoltage(ch chan<- prometheus.Metric, chassisID string, voltageInfo schemas.Voltage) {

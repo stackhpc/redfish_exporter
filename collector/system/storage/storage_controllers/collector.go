@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
@@ -40,7 +41,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *s
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "system.storage.storage_controllers",
 			"storage", storage.ID,
 		),
 		storage:  storage,
@@ -61,6 +62,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	storageControllers, err := c.storage.Controllers()
 	if err != nil {
 		c.Log.Info("Errors Getting storagecontrollers from system storage", "err", err)
@@ -75,6 +77,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		wg.Go(func() { c.parseController(ch, &controller) })
 	}
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
 func (c *Collector) parseController(ch chan<- prometheus.Metric, controller *schemas.StorageController) {

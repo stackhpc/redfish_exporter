@@ -3,16 +3,13 @@ package thermal_subsystem
 import (
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/thermal_subsystem/fans"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/thermal_subsystem/thermal_metrics"
 	"github.com/stackhpc/redfish_exporter/common"
 	"github.com/stmcginnis/gofish/schemas"
-)
-
-var (
-	Subsystem = "chassis"
 )
 
 // Implements the prometheus.Collector.
@@ -27,7 +24,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassis *s
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "chassis.thermal_subsystem",
 		),
 		chassis: chassis,
 	}
@@ -46,6 +43,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 
 // Given a chassis, collect data from its ThermalSubsystem
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	thermalSubsystem, err := c.chassis.ThermalSubsystem()
 	if err != nil {
 		c.Log.Error("error getting thermal subsystem from chassis", "operation", "chassis.ThermalSubsystem()", "err", err)
@@ -65,4 +63,5 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	wg.Go(func() { fanCollector.Collect(ch) })
 
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
