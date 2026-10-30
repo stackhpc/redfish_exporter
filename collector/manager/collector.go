@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
@@ -73,14 +74,14 @@ func (m *Collector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implemented prometheus.Collector
 func (m *Collector) Collect(ch chan<- prometheus.Metric) {
-	logContext := m.Log
+	startTime := time.Now()
 	//get service
 	service := m.Ctx.RedfishClient.Service
 
 	// get a list of managers from service
 	managers, err := service.Managers()
 	if err != nil {
-		logContext.Error("error getting managers from service", "operation", "service.Managers()", "err", err)
+		m.Log.Error("error getting managers from service", "operation", "service.Managers()", "err", err)
 		return
 	}
 
@@ -93,11 +94,11 @@ func (m *Collector) Collect(ch chan<- prometheus.Metric) {
 
 	wg.Wait()
 	m.collectorScrapeStatus.WithLabelValues("manager").Set(float64(1))
+	m.Log.Info("collection complete", "duration", time.Now().Sub(startTime))
 }
 
 func (c *Collector) collectManager(ch chan<- prometheus.Metric, manager *schemas.Manager) {
-	logContext := c.Log.With("Manager", manager.ID)
-	logContext.Info("collector scrape started")
+	logContext := c.Log.With("manager", manager.ID)
 	// overall manager metrics
 	managerType := fmt.Sprint(manager.ManagerType)
 
@@ -137,6 +138,4 @@ func (c *Collector) collectManager(ch chan<- prometheus.Metric, manager *schemas
 			wg.Wait()
 		}
 	}
-
-	logContext.Info("collector scrape completed")
 }

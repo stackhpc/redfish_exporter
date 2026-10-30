@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"slices"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/collector/system/ethernet_interfaces"
@@ -97,6 +98,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 
 // Collect implements prometheus.Collector.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	disabledMetrics := c.Ctx.DisabledMetrics
 	service := c.Ctx.RedfishClient.Service
 
@@ -106,12 +108,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
+	wg := &sync.WaitGroup{}
 	for _, system := range systems {
-		systemLogContext := c.Log.With("System", system.ID)
-		systemLogContext.Info("collector scrape started")
-
-		wg := &sync.WaitGroup{}
-
 		wg.Go(func() { c.collectOverallMetrics(ch, system) })
 
 		if !slices.Contains(disabledMetrics, "memory") {
@@ -158,12 +156,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		if c.Ctx.CollectLogs {
 			wg.Go(func() { c.collectLogs(ch, system) })
 		}
-
-		wg.Wait()
-
-		systemLogContext.Info("collector scrape completed")
 	}
+
+	wg.Wait()
 	c.collectorScrapeStatus.WithLabelValues("system").Set(float64(1))
+	c.Log.Info("collection complete", "duration", time.Now().Sub(startTime))
 }
 
 func (c *Collector) collectOverallMetrics(ch chan<- prometheus.Metric, system *schemas.ComputerSystem) {

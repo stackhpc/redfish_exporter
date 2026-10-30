@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
@@ -40,7 +41,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, system *sc
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "system.memory",
 			"system", system.ID,
 		),
 		system: system,
@@ -60,6 +61,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	memories, err := c.system.Memory()
 	if err != nil {
 		c.Log.Error("error getting memory data from system", "operation", "system.Memory()", "err", err)
@@ -74,6 +76,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		wg.Go(func() { parseMemory(ch, c.system.HostName, memory) })
 	}
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
 func parseMemory(ch chan<- prometheus.Metric, systemHostName string, memory *schemas.Memory) {

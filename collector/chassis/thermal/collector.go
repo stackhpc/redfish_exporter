@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/thermal_common"
@@ -54,7 +55,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, chassis *s
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "chassis.thermal",
 		),
 		chassis: chassis,
 	}
@@ -74,6 +75,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 
 // Given a chassis, collect data from its Thermal resource
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	thermal, err := c.chassis.Thermal()
 	if err != nil {
 		c.Log.Error("error getting thermal data from chassis", "operation", "chassis.Thermal()", "err", err)
@@ -98,6 +100,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
 func parseChassisTemperature(ch chan<- prometheus.Metric, chassisID string, chassisTemperature schemas.Temperature) {

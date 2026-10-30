@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
@@ -39,7 +40,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, system *sc
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "system.pcie_functions",
 			"system", system.ID,
 		),
 		system: system,
@@ -59,6 +60,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	pcieFunctions, err := c.system.PCIeFunctions()
 	if err != nil {
 		c.Log.Error("error getting PCI-E device function data from system", "operation", "system.PCIEFunctions()", "err", err)
@@ -73,6 +75,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		wg.Go(func() { c.parsePcieFunction(ch, pcieFunction) })
 	}
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
 func (c *Collector) parsePcieFunction(ch chan<- prometheus.Metric, pcieFunction *schemas.PCIeFunction) {

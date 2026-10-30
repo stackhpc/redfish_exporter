@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
@@ -42,7 +43,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *s
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "system.storage.volumes",
 			"storage", storage.ID,
 		),
 		storage:            storage,
@@ -64,6 +65,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	volumes, err := c.storage.Volumes()
 	if err != nil {
 		c.Log.Error("error getting storage data from system", "operation", "system.Volumes()", "err", err)
@@ -84,6 +86,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
 func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *schemas.Volume) {

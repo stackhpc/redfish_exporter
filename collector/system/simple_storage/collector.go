@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
@@ -39,7 +40,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, system *sc
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "system.simple_storage",
 			"system", system.ID,
 		),
 		system: system,
@@ -59,6 +60,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	simpleStorages, err := c.system.SimpleStorage()
 	if err != nil {
 		c.Log.Error("error getting simple storage data from system", "operation", "system.SimpleStorages()", "err", err)
@@ -87,6 +89,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
 func (c *Collector) parseDevice(ch chan<- prometheus.Metric, device schemas.Device) {

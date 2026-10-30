@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
@@ -42,7 +43,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, system *sc
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
-			"collector", Subsystem,
+			"collector", "system.ethernet_interfaces",
 			"system", system.ID,
 		),
 		system: system,
@@ -62,6 +63,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 }
 
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	ethernetInterfaces, err := c.system.EthernetInterfaces()
 	if err != nil {
 		c.Log.Error("error getting ethernet interface data from system", "operation", "system.EthernetInterfaces()", "err", err)
@@ -76,6 +78,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		wg.Go(func() { c.parseEthernetInterface(ch, ethernetInterface) })
 	}
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
 func (c *Collector) parseEthernetInterface(ch chan<- prometheus.Metric, ethernetInterface *schemas.EthernetInterface) {
