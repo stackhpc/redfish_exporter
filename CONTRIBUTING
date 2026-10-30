@@ -1,0 +1,16 @@
+# Testing
+Tests can be run with `make test`. Tests spin up a Docker container that serves a specified Redfish mockup.
+They then run the tested collector against this mockup and validate the Prometheus output.
+
+# Adding metrics/collectors
+If adding a metric to an existing collector, please make sure to add it to the tests for that collector.
+
+The easiest way to do this is to add the metric name to the `CollectAndCompare` call, run the test, and inspect the diff produced manually. If it looks correct, then add it to the expected output so we can ensure it doesn't change unexpectedly.
+
+New collectors must be added for any request to the BMC, i.e. if you are processing some property on an existing object, this can be added to an existing metric, if you are calling a function on an object to get a new one this must be a new collector.
+This is to ensure requests are made as parallel as possible to keep scrape times down.
+
+Collectors must be spawned as a waitgroup-synchronised goroutine from a parent collector.
+
+All collectors must have tests to ensure their output does not change unexpectedly.
+You can perform a search through the `test_dependencies` directory to find a mockup which exposes the data you are collecting.
