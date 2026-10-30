@@ -13,9 +13,6 @@
 
 build/
 
-*.yml
-*.yaml
-
 redfish_exporter
 
 # Editor backup files
