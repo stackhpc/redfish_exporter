@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"log/slog"
+	"slices"
 	"sync"
 	"time"
 
@@ -47,12 +48,37 @@ func createMetricMap() map[string]common.Metric {
 	return metrics
 }
 
+type Children struct {
+	// Thermal() was deprecated in Redfish v1.15.0
+	thermal *thermal.Collector
+	// It was replaced with ThermalSubsystem()
+	thermal_subsystem *thermal_subsystem.Collector
+	// Power() was deprecated in Redfish v1.15.0
+	power *power.Collector
+	// It was replaced with PowerSubsystem()
+	power_subsystem *power_subsystem.Collector
+	// Some metrics were also moved to EnvironmentMetrics
+	environment_metrics *environment_metrics.Collector
+	network_adapters    *network_adapters.Collector
+}
+
+func (c *Children) collect(ch chan<- prometheus.Metric) {
+	wg := &sync.WaitGroup{}
+	wg.Go(func() { c.thermal.Collect(ch) })
+	wg.Go(func() { c.thermal_subsystem.Collect(ch) })
+	wg.Go(func() { c.power.Collect(ch) })
+	wg.Go(func() { c.power_subsystem.Collect(ch) })
+	wg.Go(func() { c.environment_metrics.Collect(ch) })
+	wg.Go(func() { c.network_adapters.Collect(ch) })
+	wg.Wait()
+}
+
 // Collector implements the prometheus.Collector.
 type Collector struct {
 	Ctx                   *common.CollectionContext
 	collectorScrapeStatus *prometheus.GaugeVec
 	Log                   *slog.Logger
-	thermal               *thermal.Collector
+	children              map[string]Children // Map of Chassis ID to children
 }
 
 // NewCollector returns a collector that collecting chassis statistics
@@ -72,7 +98,39 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector
 			},
 			[]string{"collector"},
 		),
+		children: make(map[string]Children),
 	}
+}
+
+// Add/remove children from new list of chassis. Collect new chassis.
+func (c *Collector) updateChildren(ch chan<- prometheus.Metric, chassis []*schemas.Chassis) {
+	updated_chassis := make([]string, 0, len(chassis))
+	wg := &sync.WaitGroup{}
+	for _, chassis := range chassis {
+		updated_chassis = append(updated_chassis, chassis.ID)
+		_, exists := c.children[chassis.ID]
+		if !exists {
+			chassisLogContext := c.Log.With("chassis", chassis.ID)
+			child := Children{
+				thermal:             thermal.NewCollector(c.Ctx, chassisLogContext, chassis),
+				thermal_subsystem:   thermal_subsystem.NewCollector(c.Ctx, chassisLogContext, chassis),
+				power:               power.NewCollector(c.Ctx, chassisLogContext, chassis),
+				power_subsystem:     power_subsystem.NewCollector(c.Ctx, chassisLogContext, chassis),
+				environment_metrics: environment_metrics.NewCollector(c.Ctx, chassisLogContext, chassis),
+				network_adapters:    network_adapters.NewCollector(c.Ctx, chassisLogContext, chassis),
+			}
+			c.children[chassis.ID] = child
+			wg.Go(func() { child.collect(ch) })
+		}
+	}
+
+	// Clear children for Chassis that no longer exist
+	for ID, _ := range c.children {
+		if !slices.Contains(updated_chassis, ID) {
+			delete(c.children, ID)
+		}
+	}
+	wg.Wait()
 }
 
 // Describe implemented prometheus.Collector
@@ -95,41 +153,26 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 	wg := &sync.WaitGroup{}
 
+	// Collect from cached children
+	for _, child := range c.children {
+		wg.Go(func() { child.collect(ch) })
+	}
+
 	// get a list of chassis from service
 	chassises, err := service.Chassis()
 	if err != nil {
 		c.Log.Error("error getting chassis from service", "operation", "service.Chassis()", "err", err)
+		if common.ErrorIsAccessDenied(err) {
+			c.Log.Info("Marking creds as invalid.")
+			c.Ctx.CredsInvalid = true
+		}
+		wg.Wait()
 		return
 	}
 
-	// process the chassises
+	// process the data that is directly from chassis (not children)
 	for _, chassis := range chassises {
-		chassisLogContext := c.Log.With("chassis", chassis.ID)
-
 		wg.Go(func() { c.collectChassis(ch, chassis) })
-
-		// Thermal() was deprecated in Redfish v1.15.0
-		thermal := thermal.NewCollector(c.Ctx, chassisLogContext, chassis)
-		wg.Go(func() { thermal.Collect(ch) })
-
-		// It was replaced with ThermalSubsystem()
-		thermal_subsystem := thermal_subsystem.NewCollector(c.Ctx, chassisLogContext, chassis)
-		wg.Go(func() { thermal_subsystem.Collect(ch) })
-
-		// Power() was deprecated in Redfish v1.15.0
-		power := power.NewCollector(c.Ctx, chassisLogContext, chassis)
-		wg.Go(func() { power.Collect(ch) })
-
-		// It was replaced with PowerSubsystem()
-		power_subsystem := power_subsystem.NewCollector(c.Ctx, chassisLogContext, chassis)
-		wg.Go(func() { power_subsystem.Collect(ch) })
-
-		// Some metrics were also moved to EnvironmentMetrics
-		environment_metrics := environment_metrics.NewCollector(c.Ctx, chassisLogContext, chassis)
-		wg.Go(func() { environment_metrics.Collect(ch) })
-
-		network_adapters := network_adapters.NewCollector(c.Ctx, chassisLogContext, chassis)
-		wg.Go(func() { network_adapters.Collect(ch) })
 
 		// process log services
 		if c.Ctx.CollectLogs {
@@ -137,7 +180,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
+	// Update cached children
+	c.updateChildren(ch, chassises)
+
 	wg.Wait()
+
 	c.collectorScrapeStatus.WithLabelValues("chassis").Set(float64(1))
 	c.Log.Info("collection complete", "duration", time.Now().Sub(startTime))
 }

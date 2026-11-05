@@ -3,6 +3,7 @@ package fans
 import (
 	"log/slog"
 	"sync"
+	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/collector/chassis/thermal_common"
@@ -42,6 +43,7 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 
 // Given a ThermalSubsystem, collect data from its Fans
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
+	startTime := time.Now()
 	chassisFans, err := c.thermalSubsystem.Fans()
 	if err != nil {
 		c.Log.Error("Error getting fans from thermal subsystem", "id", c.thermalSubsystem.ID, "err", err)
@@ -54,6 +56,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	}
 
 	wg.Wait()
+	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
 func parseFan(ch chan<- prometheus.Metric, chassisID *string, chassisFan *schemas.Fan) {

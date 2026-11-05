@@ -54,12 +54,53 @@ func createMetricMap() map[string]common.Metric {
 	return metrics
 }
 
+type Children struct {
+	ethernet_interfaces *ethernet_interfaces.Collector
+	memory              *memory.Collector
+	network_interfaces  *network_interfaces.Collector
+	pcie_devices        *pcie_devices.Collector
+	pcie_functions      *pcie_functions.Collector
+	processors          *processors.Collector
+	simple_storage      *simple_storage.Collector
+	storage             *storage.Collector
+}
+
+func (c *Children) collect(ch chan<- prometheus.Metric, disabledMetrics []string) {
+	wg := &sync.WaitGroup{}
+	if !slices.Contains(disabledMetrics, "ethernet_interfaces") {
+		wg.Go(func() { c.ethernet_interfaces.Collect(ch) })
+	}
+	if !slices.Contains(disabledMetrics, "memory") {
+		wg.Go(func() { c.memory.Collect(ch) })
+	}
+	if !slices.Contains(disabledMetrics, "network_interfaces") {
+		wg.Go(func() { c.network_interfaces.Collect(ch) })
+	}
+	if !slices.Contains(disabledMetrics, "pcie_devices") {
+		wg.Go(func() { c.pcie_devices.Collect(ch) })
+	}
+	if !slices.Contains(disabledMetrics, "pcie_functions") {
+		wg.Go(func() { c.pcie_functions.Collect(ch) })
+	}
+	if !slices.Contains(disabledMetrics, "processor") {
+		wg.Go(func() { c.processors.Collect(ch) })
+	}
+	if !slices.Contains(disabledMetrics, "simple_storage") {
+		wg.Go(func() { c.simple_storage.Collect(ch) })
+	}
+	if !slices.Contains(disabledMetrics, "storage") {
+		wg.Go(func() { c.storage.Collect(ch) })
+	}
+	wg.Wait()
+}
+
 // Collector implements the prometheus.Collector.
 type Collector struct {
 	Ctx *common.CollectionContext
 	prometheus.Collector
 	collectorScrapeStatus *prometheus.GaugeVec
 	Log                   *slog.Logger
+	children              map[string]Children // Map of System ID to children
 }
 
 // NewCollector returns a collector that collecting memory statistics
@@ -77,7 +118,41 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger) *Collector
 			},
 			[]string{"collector"},
 		),
+		children: make(map[string]Children),
 	}
+}
+
+// Add/remove children from new list of systems. Collect new systems.
+func (c *Collector) updateChildren(ch chan<- prometheus.Metric, systems []*schemas.ComputerSystem) {
+	updated_systems := make([]string, 0, len(systems))
+	wg := &sync.WaitGroup{}
+	for _, system := range systems {
+		updated_systems = append(updated_systems, system.ID)
+		_, exists := c.children[system.ID]
+		if !exists {
+			systemLogContext := c.Log.With("system", system.ID)
+			child := Children{
+				ethernet_interfaces: ethernet_interfaces.NewCollector(c.Ctx, systemLogContext, system),
+				memory:              memory.NewCollector(c.Ctx, systemLogContext, system),
+				network_interfaces:  network_interfaces.NewCollector(c.Ctx, systemLogContext, system),
+				pcie_devices:        pcie_devices.NewCollector(c.Ctx, systemLogContext, system),
+				pcie_functions:      pcie_functions.NewCollector(c.Ctx, systemLogContext, system),
+				processors:          processors.NewCollector(c.Ctx, systemLogContext, system),
+				simple_storage:      simple_storage.NewCollector(c.Ctx, systemLogContext, system),
+				storage:             storage.NewCollector(c.Ctx, systemLogContext, system),
+			}
+			c.children[system.ID] = child
+			wg.Go(func() { child.collect(ch, c.Ctx.DisabledMetrics) })
+		}
+	}
+
+	// Clear children for Systems that no longer exist
+	for ID, _ := range c.children {
+		if !slices.Contains(updated_systems, ID) {
+			delete(c.children, ID)
+		}
+	}
+	wg.Wait()
 }
 
 // Describe implements prometheus.Collector.
@@ -99,58 +174,23 @@ func (c *Collector) Describe(ch chan<- *prometheus.Desc) {
 // Collect implements prometheus.Collector.
 func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	startTime := time.Now()
-	disabledMetrics := c.Ctx.DisabledMetrics
 	service := c.Ctx.RedfishClient.Service
+
+	wg := &sync.WaitGroup{}
+	// Collect from cached children
+	for _, child := range c.children {
+		wg.Go(func() { child.collect(ch, c.Ctx.DisabledMetrics) })
+	}
 
 	systems, err := service.Systems()
 	if err != nil {
 		c.Log.Error("error getting systems from service", "operation", "service.Systems()", "err", err)
+		wg.Wait()
 		return
 	}
 
-	wg := &sync.WaitGroup{}
 	for _, system := range systems {
 		wg.Go(func() { c.collectOverallMetrics(ch, system) })
-
-		if !slices.Contains(disabledMetrics, "memory") {
-			collector := memory.NewCollector(c.Ctx, c.Log, system)
-			wg.Go(func() { collector.Collect(ch) })
-		}
-
-		if !slices.Contains(disabledMetrics, "processor") {
-			collector := processors.NewCollector(c.Ctx, c.Log, system)
-			wg.Go(func() { collector.Collect(ch) })
-		}
-
-		if !slices.Contains(disabledMetrics, "storage") {
-			collector := storage.NewCollector(c.Ctx, c.Log, system)
-			wg.Go(func() { collector.Collect(ch) })
-		}
-
-		if !slices.Contains(disabledMetrics, "pcie_devices") {
-			collector := pcie_devices.NewCollector(c.Ctx, c.Log, system)
-			wg.Go(func() { collector.Collect(ch) })
-		}
-
-		if !slices.Contains(disabledMetrics, "network_interfaces") {
-			collector := network_interfaces.NewCollector(c.Ctx, c.Log, system)
-			wg.Go(func() { collector.Collect(ch) })
-		}
-
-		if !slices.Contains(disabledMetrics, "ethernet_interfaces") {
-			collector := ethernet_interfaces.NewCollector(c.Ctx, c.Log, system)
-			wg.Go(func() { collector.Collect(ch) })
-		}
-
-		if !slices.Contains(disabledMetrics, "simple_storage") {
-			collector := simple_storage.NewCollector(c.Ctx, c.Log, system)
-			wg.Go(func() { collector.Collect(ch) })
-		}
-
-		if !slices.Contains(disabledMetrics, "pcie_functions") {
-			collector := pcie_functions.NewCollector(c.Ctx, c.Log, system)
-			wg.Go(func() { collector.Collect(ch) })
-		}
 
 		// process log services
 		if c.Ctx.CollectLogs {
@@ -158,7 +198,11 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		}
 	}
 
+	// Update cached children
+	c.updateChildren(ch, systems)
+
 	wg.Wait()
+
 	c.collectorScrapeStatus.WithLabelValues("system").Set(float64(1))
 	c.Log.Info("collection complete", "duration", time.Now().Sub(startTime))
 }

@@ -8,6 +8,7 @@ import (
 	"os"
 	"os/signal"
 	"strconv"
+	"sync"
 	"syscall"
 
 	kingpin "github.com/alecthomas/kingpin/v2"
@@ -20,8 +21,6 @@ import (
 	"github.com/stackhpc/redfish_exporter/collector"
 	"github.com/stackhpc/redfish_exporter/common"
 )
-
-import _ "net/http/pprof"
 
 var (
 	Version       string
@@ -41,7 +40,48 @@ var (
 		C: &common.Config{},
 	}
 	reloadCh chan chan error
+
+	targetStates = make(map[string]TargetState)
+
+	targetGatherersMu = NewStringKeyLock()
 )
+
+type TargetState struct {
+	gatherers prometheus.Gatherers
+	context   *common.CollectionContext
+}
+
+type StringKeyLock struct {
+	locks map[string]*sync.Mutex
+
+	mapLock sync.Mutex // to make the map safe concurrently
+}
+
+func NewStringKeyLock() *StringKeyLock {
+	return &StringKeyLock{locks: make(map[string]*sync.Mutex)}
+}
+
+func (l *StringKeyLock) getLockBy(key string) *sync.Mutex {
+	l.mapLock.Lock()
+	defer l.mapLock.Unlock()
+
+	ret, found := l.locks[key]
+	if found {
+		return ret
+	}
+
+	ret = &sync.Mutex{}
+	l.locks[key] = ret
+	return ret
+}
+
+func (l *StringKeyLock) Lock(key string) {
+	l.getLockBy(key).Lock()
+}
+
+func (l *StringKeyLock) Unlock(key string) {
+	l.getLockBy(key).Unlock()
+}
 
 func init() {
 	promslogConfig := promslog.Config{}
@@ -104,71 +144,91 @@ func (l *ErrorLogger) Println(v ...any) {
 // define new http handleer
 func metricsHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		registry := prometheus.NewPedanticRegistry()
 		target := r.URL.Query().Get("target")
 		if target == "" {
 			http.Error(w, "'target' parameter must be specified", 400)
 			return
 		}
+
+		// Prevents two scrapes for same target at the same time creating multiple clients
+		targetGatherersMu.Lock(target)
+		state, ok := targetStates[target]
+
 		targetLoggerCtx := rootLoggerCtx.With("target", target)
-		targetLoggerCtx.Info("scraping target host")
+		if state.context != nil && state.context.CredsInvalid {
+			targetLoggerCtx.Info("Creds invalid, creating new client")
+			ok = false
+		}
+		if !ok {
+			targetLoggerCtx.Info("Creating new client")
 
-		var (
-			hostConfig *common.HostConfig
-			err        error
-			ok         bool
-			group      []string
-		)
+			var (
+				hostConfig *common.HostConfig
+				err        error
+				ok         bool
+				group      []string
+			)
 
-		group, ok = r.URL.Query()["group"]
+			group, ok = r.URL.Query()["group"]
 
-		if ok && len(group[0]) >= 1 {
-			// Trying to get hostConfig from group.
-			if hostConfig, err = sc.HostConfigForGroup(group[0]); err != nil {
-				targetLoggerCtx.Error("error getting credentials", "err", err)
+			if ok && len(group[0]) >= 1 {
+				// Trying to get hostConfig from group.
+				if hostConfig, err = sc.HostConfigForGroup(group[0]); err != nil {
+					targetLoggerCtx.Error("error getting credentials", "err", err)
+					targetGatherersMu.Unlock(target)
+					return
+				}
+			}
+
+			// Always falling back to single host config when group config failed.
+			if hostConfig == nil {
+				if hostConfig, err = sc.HostConfigForTarget(target); err != nil {
+					targetLoggerCtx.Error("error getting credentials", "err", err)
+					targetGatherersMu.Unlock(target)
+					return
+				}
+			}
+
+			// Support optionally overriding collectlogs setting using a query parameter
+			collectLogs := hostConfig.Collectlogs
+			collectLogsOverride := r.URL.Query().Get("collectlogs")
+			if collectLogsOverride != "" {
+				if collectLogsQuery, err := strconv.ParseBool(collectLogsOverride); err != nil {
+					targetLoggerCtx.Error("error parsing collectlogs query parameter as a boolean", "err", err)
+				} else {
+					collectLogs = collectLogsQuery
+				}
+			}
+
+			collectionCtx, err := common.NewCollectionContext(target, hostConfig, targetLoggerCtx, collectLogs)
+			if err != nil {
+				targetLoggerCtx.Error("error creating collection context", "err", err)
+				targetGatherersMu.Unlock(target)
 				return
 			}
-		}
-
-		// Always falling back to single host config when group config failed.
-		if hostConfig == nil {
-			if hostConfig, err = sc.HostConfigForTarget(target); err != nil {
-				targetLoggerCtx.Error("error getting credentials", "err", err)
-				return
+			collector := collector.NewRedfishCollector(collectionCtx, targetLoggerCtx)
+			registry := prometheus.NewPedanticRegistry()
+			registry.MustRegister(collector)
+			state = TargetState{
+				gatherers: prometheus.Gatherers{
+					prometheus.DefaultGatherer,
+					registry,
+				},
+				context: collectionCtx,
 			}
+			targetStates[target] = state
+		} else {
+			targetLoggerCtx.Info("Scraping with cached client")
 		}
-
-		// Support optionally overriding collectlogs setting using a query parameter
-		collectLogs := hostConfig.Collectlogs
-		collectLogsOverride := r.URL.Query().Get("collectlogs")
-		if collectLogsOverride != "" {
-			if collectLogsQuery, err := strconv.ParseBool(collectLogsOverride); err != nil {
-				targetLoggerCtx.Error("error parsing collectlogs query parameter as a boolean", "err", err)
-			} else {
-				collectLogs = collectLogsQuery
-			}
-		}
-
-		collectionCtx, err := common.NewCollectionContext(target, hostConfig, targetLoggerCtx, collectLogs)
-		if err != nil {
-			targetLoggerCtx.Error("error creating collection context", "err", err)
-			return
-		}
-		collector := collector.NewRedfishCollector(collectionCtx, targetLoggerCtx)
-		registry.MustRegister(collector)
-		gatherers := prometheus.Gatherers{
-			prometheus.DefaultGatherer,
-			registry,
-		}
+		targetGatherersMu.Unlock(target)
 
 		errorLogger := ErrorLogger{
 			logger: targetLoggerCtx,
 		}
 
 		// Delegate http serving to Prometheus client library, which will call collector.Collect.
-		h := promhttp.HandlerFor(gatherers, promhttp.HandlerOpts{ErrorLog: &errorLogger})
+		h := promhttp.HandlerFor(state.gatherers, promhttp.HandlerOpts{ErrorLog: &errorLogger})
 		h.ServeHTTP(w, r)
-
 	}
 }
 
