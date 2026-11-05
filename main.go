@@ -43,7 +43,7 @@ var (
 
 	targetStates = make(map[string]TargetState)
 
-	targetGatherersMu = NewStringKeyLock()
+	targetStatesMu = NewStringKeyLock()
 )
 
 type TargetState struct {
@@ -81,6 +81,14 @@ func (l *StringKeyLock) Lock(key string) {
 
 func (l *StringKeyLock) Unlock(key string) {
 	l.getLockBy(key).Unlock()
+}
+
+func (l *StringKeyLock) LockAll() {
+	l.mapLock.Lock()
+}
+
+func (l *StringKeyLock) UnlockAll() {
+	l.mapLock.Unlock()
 }
 
 func init() {
@@ -151,7 +159,7 @@ func metricsHandler() http.HandlerFunc {
 		}
 
 		// Prevents two scrapes for same target at the same time creating multiple clients
-		targetGatherersMu.Lock(target)
+		targetStatesMu.Lock(target)
 		state, ok := targetStates[target]
 
 		targetLoggerCtx := rootLoggerCtx.With("target", target)
@@ -175,7 +183,7 @@ func metricsHandler() http.HandlerFunc {
 				// Trying to get hostConfig from group.
 				if hostConfig, err = sc.HostConfigForGroup(group[0]); err != nil {
 					targetLoggerCtx.Error("error getting credentials", "err", err)
-					targetGatherersMu.Unlock(target)
+					targetStatesMu.Unlock(target)
 					return
 				}
 			}
@@ -184,7 +192,7 @@ func metricsHandler() http.HandlerFunc {
 			if hostConfig == nil {
 				if hostConfig, err = sc.HostConfigForTarget(target); err != nil {
 					targetLoggerCtx.Error("error getting credentials", "err", err)
-					targetGatherersMu.Unlock(target)
+					targetStatesMu.Unlock(target)
 					return
 				}
 			}
@@ -203,7 +211,7 @@ func metricsHandler() http.HandlerFunc {
 			collectionCtx, err := common.NewCollectionContext(target, hostConfig, targetLoggerCtx, collectLogs)
 			if err != nil {
 				targetLoggerCtx.Error("error creating collection context", "err", err)
-				targetGatherersMu.Unlock(target)
+				targetStatesMu.Unlock(target)
 				return
 			}
 			collector := collector.NewRedfishCollector(collectionCtx, targetLoggerCtx)
@@ -220,7 +228,7 @@ func metricsHandler() http.HandlerFunc {
 		} else {
 			targetLoggerCtx.Info("Scraping with cached client")
 		}
-		targetGatherersMu.Unlock(target)
+		targetStatesMu.Unlock(target)
 
 		errorLogger := ErrorLogger{
 			logger: targetLoggerCtx,
@@ -258,6 +266,12 @@ func main() {
 					configLoggerCtx.Error("failed to reload config file", "err", err)
 					break
 				}
+				targetStatesMu.LockAll()
+				for k := range targetStates {
+					targetStates[k].context.RedfishClient.Logout()
+					delete(targetStates, k)
+				}
+				targetStatesMu.UnlockAll()
 				configLoggerCtx.Info("config file reload", "operation", "sc.ReloadConfig")
 			case rc := <-reloadCh:
 				if err := sc.ReloadConfig(*configFile); err != nil {
@@ -265,6 +279,12 @@ func main() {
 					rc <- err
 					break
 				}
+				targetStatesMu.LockAll()
+				for k := range targetStates {
+					targetStates[k].context.RedfishClient.Logout()
+					delete(targetStates, k)
+				}
+				targetStatesMu.UnlockAll()
 				configLoggerCtx.Info("config file reloaded", "operation", "sc.ReloadConfig")
 				rc <- nil
 			}
