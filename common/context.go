@@ -23,6 +23,7 @@ type CollectionContext struct {
 	CollectLogs     bool
 	LogCount        map[string]int
 	DisabledMetrics []string
+	CredsInvalid    bool
 }
 
 func NewCollectionContext(target string, hostconfig *HostConfig, logger *slog.Logger, collectLogs bool) (*CollectionContext, error) {
@@ -52,7 +53,7 @@ func newRedfishClient(host string, username string, password string) (*gofish.AP
 		Username:              username,
 		Password:              password,
 		Insecure:              true,
-		MaxConcurrentRequests: 1024,
+		MaxConcurrentRequests: 128,
 		ReuseConnections:      true,
 	}
 	redfishClient, err := gofish.Connect(config)

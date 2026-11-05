@@ -122,6 +122,14 @@ func (d *VolumeDeduplicator) SetVolumeIsSeen(volume *schemas.Volume) bool {
 	return false
 }
 
+func (d *VolumeDeduplicator) Clear() {
+	d.mu.Lock()
+	for k := range d.seenVolumes {
+		delete(d.seenVolumes, k)
+	}
+	d.mu.Unlock()
+}
+
 func NewVolumeDeduplicator() VolumeDeduplicator {
 	return VolumeDeduplicator{
 		seenVolumes: make(map[string]any),

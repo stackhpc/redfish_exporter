@@ -83,7 +83,6 @@ func (r *RedfishCollector) Describe(ch chan<- *prometheus.Desc) {
 func (r *RedfishCollector) Collect(ch chan<- prometheus.Metric) {
 	scrapeTime := time.Now()
 	if r.redfishClient != nil {
-		defer r.redfishClient.Logout()
 		r.redfishUp.Set(1)
 		wg := &sync.WaitGroup{}
 		wg.Add(len(r.collectors))

@@ -109,5 +109,22 @@ func BoolToFloat64(data bool) float64 {
 		return float64(1)
 	}
 	return float64(0)
+}
 
+// Checks if an error returned by Gofish was caused by a 401
+func ErrorIsAccessDenied(error error) bool {
+	switch error.(type) {
+	case *schemas.CollectionError:
+		errors, _ := error.(*schemas.CollectionError)
+		for _, e := range errors.Failures {
+			if ErrorIsAccessDenied(e) {
+				return true
+			}
+		}
+	case *schemas.Error:
+		e, _ := error.(*schemas.Error)
+		return e.HTTPReturnedStatusCode == 401
+	}
+
+	return false
 }
