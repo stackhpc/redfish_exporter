@@ -149,6 +149,15 @@ hosts:
       - "pcie_functions"
 ```
 
+## Configuring current requests
+
+By default, up to 128 HTTP requests can be in-flight to a BMC concurrently.
+Some BMCs may be able to handle more, in which case you can increase this value to get faster scrape times.
+Some BMCs may be able to handle less, which will show up in the exporter logs as i/o timeouts. In this case,
+the value should be reduced at the cost of longer scrape times.
+
+This can be done by setting `concurrent_requests` for a group or host.
+
 ## Building
 
 To build the redfish_exporter executable run the command:

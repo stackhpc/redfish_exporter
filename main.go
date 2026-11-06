@@ -197,6 +197,8 @@ func metricsHandler() http.HandlerFunc {
 				}
 			}
 
+			targetLoggerCtx.Info("concurrent requests configured", "concurrent_requests", hostConfig.ConcurrentRequests)
+
 			// Support optionally overriding collectlogs setting using a query parameter
 			collectLogs := hostConfig.Collectlogs
 			collectLogsOverride := r.URL.Query().Get("collectlogs")
