@@ -20,11 +20,12 @@ type SafeConfig struct {
 }
 
 type HostConfig struct {
-	Username        string         `yaml:"username"`
-	Password        string         `yaml:"password"`
-	Collectlogs     bool           `yaml:"collectlogs,omitempty"`
-	Logcount        map[string]int `yaml:"logcount,omitempty"`
-	DisabledMetrics []string       `yaml:"disabled_metrics"`
+	Username           string         `yaml:"username"`
+	Password           string         `yaml:"password"`
+	Collectlogs        bool           `yaml:"collectlogs,omitempty"`
+	Logcount           map[string]int `yaml:"logcount,omitempty"`
+	DisabledMetrics    []string       `yaml:"disabled_metrics"`
+	ConcurrentRequests int64          `yaml:"concurrent_requests,omitempty"`
 }
 
 func (sc *SafeConfig) ReloadConfig(configFile string) error {
@@ -38,6 +39,16 @@ func (sc *SafeConfig) ReloadConfig(configFile string) error {
 		return err
 	}
 
+	for key, config := range c.Groups {
+		config.ApplyDefaults()
+		c.Groups[key] = config
+	}
+
+	for key, config := range c.Hosts {
+		config.ApplyDefaults()
+		c.Hosts[key] = config
+	}
+
 	sc.Lock()
 	sc.C = c
 	sc.Unlock()
@@ -45,35 +56,23 @@ func (sc *SafeConfig) ReloadConfig(configFile string) error {
 	return nil
 }
 
+func (c *HostConfig) ApplyDefaults() {
+	if c.DisabledMetrics == nil {
+		c.DisabledMetrics = []string{}
+	}
+	if c.ConcurrentRequests == 0 {
+		c.ConcurrentRequests = 128
+	}
+}
+
 func (sc *SafeConfig) HostConfigForTarget(target string) (*HostConfig, error) {
 	sc.Lock()
 	defer sc.Unlock()
 	if hostConfig, ok := sc.C.Hosts[target]; ok {
-		disabledMetrics := hostConfig.DisabledMetrics
-		if disabledMetrics == nil {
-			disabledMetrics = []string{}
-		}
-		return &HostConfig{
-			Username:        hostConfig.Username,
-			Password:        hostConfig.Password,
-			Collectlogs:     hostConfig.Collectlogs,
-			Logcount:        hostConfig.Logcount,
-			DisabledMetrics: disabledMetrics,
-		}, nil
+		return &hostConfig, nil
 	}
 	if hostConfig, ok := sc.C.Hosts["default"]; ok {
-		disabledMetrics := hostConfig.DisabledMetrics
-		if disabledMetrics == nil {
-			disabledMetrics = []string{}
-		}
-		return &HostConfig{
-
-			Username:        hostConfig.Username,
-			Password:        hostConfig.Password,
-			Collectlogs:     hostConfig.Collectlogs,
-			Logcount:        hostConfig.Logcount,
-			DisabledMetrics: disabledMetrics,
-		}, nil
+		return &hostConfig, nil
 	}
 	return &HostConfig{}, fmt.Errorf("no credentials found for target %s", target)
 }

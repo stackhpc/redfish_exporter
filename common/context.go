@@ -28,7 +28,7 @@ type CollectionContext struct {
 
 func NewCollectionContext(target string, hostconfig *HostConfig, logger *slog.Logger, collectLogs bool) (*CollectionContext, error) {
 	startTime := time.Now()
-	client, err := newRedfishClient(target, hostconfig.Username, hostconfig.Password)
+	client, err := newRedfishClient(target, hostconfig)
 	if err != nil {
 		logger.Error("error creating redfish client", "err", err)
 		return nil, err
@@ -44,16 +44,16 @@ func NewCollectionContext(target string, hostconfig *HostConfig, logger *slog.Lo
 	return &CollectionContext{RedfishClient: client, CollectLogs: collectLogs, LogCount: logCount, DisabledMetrics: disabledMetrics}, nil
 }
 
-func newRedfishClient(host string, username string, password string) (*gofish.APIClient, error) {
+func newRedfishClient(host string, hostConfig *HostConfig) (*gofish.APIClient, error) {
 
 	url := fmt.Sprintf("https://%s", host)
 
 	config := gofish.ClientConfig{
 		Endpoint:              url,
-		Username:              username,
-		Password:              password,
+		Username:              hostConfig.Username,
+		Password:              hostConfig.Password,
 		Insecure:              true,
-		MaxConcurrentRequests: 128,
+		MaxConcurrentRequests: hostConfig.ConcurrentRequests,
 		ReuseConnections:      true,
 	}
 	redfishClient, err := gofish.Connect(config)
