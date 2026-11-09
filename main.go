@@ -220,7 +220,7 @@ func metricsHandler() http.HandlerFunc {
 				}
 			}
 
-			targetLoggerCtx.Info("concurrent requests configured", "concurrent_requests", hostConfig.ConcurrentRequests)
+			targetLoggerCtx.Info("concurrent requests configured", "concurrent_requests", *hostConfig.ConcurrentRequests)
 
 			// Support optionally overriding collectlogs setting using a query parameter
 			collectLogs := hostConfig.Collectlogs
@@ -235,11 +235,11 @@ func metricsHandler() http.HandlerFunc {
 
 			collectionCtx, err := common.NewCollectionContext(target, hostConfig, targetLoggerCtx, collectLogs)
 			if err != nil && common.ErrorIsAccessDenied(err) {
-				targetLoggerCtx.Error("Attempted to login to Redfish node, but credentials were incorrect. Entering auth backoff for 60 minutes.")
-				state.authBackoffEndTime = time.Now().Unix() + 3600
+				targetLoggerCtx.Error("Attempted to login to Redfish node, but credentials were incorrect. Entering auth backoff.", "auth_backoff_secs", *hostConfig.AuthBackoffSecs)
+				state.authBackoffEndTime = time.Now().Unix() + *hostConfig.AuthBackoffSecs
 				targetStates[target] = state
 				targetStatesMu.Unlock(target)
-				http.Error(w, "Attempted to login to Redfish node, but credentials were incorrect. Entering auth backoff for 60 minutes.", 401)
+				http.Error(w, fmt.Sprintf("Attempted to login to Redfish node, but credentials were incorrect. Entering auth backoff for %d secs.", *hostConfig.AuthBackoffSecs), 401)
 				return
 			} else if err != nil {
 				targetLoggerCtx.Error("error creating collection context", "err", err)

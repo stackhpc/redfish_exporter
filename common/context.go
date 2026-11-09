@@ -53,7 +53,7 @@ func newRedfishClient(host string, hostConfig *HostConfig) (*gofish.APIClient, e
 		Username:              hostConfig.Username,
 		Password:              hostConfig.Password,
 		Insecure:              true,
-		MaxConcurrentRequests: hostConfig.ConcurrentRequests,
+		MaxConcurrentRequests: *hostConfig.ConcurrentRequests,
 		ReuseConnections:      true,
 	}
 	redfishClient, err := gofish.Connect(config)

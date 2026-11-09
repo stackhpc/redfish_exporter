@@ -22,10 +22,11 @@ type SafeConfig struct {
 type HostConfig struct {
 	Username           string         `yaml:"username"`
 	Password           string         `yaml:"password"`
-	Collectlogs        bool           `yaml:"collectlogs,omitempty"`
-	Logcount           map[string]int `yaml:"logcount,omitempty"`
+	Collectlogs        bool           `yaml:"collectlogs"`
+	Logcount           map[string]int `yaml:"logcount"`
 	DisabledMetrics    []string       `yaml:"disabled_metrics"`
-	ConcurrentRequests int64          `yaml:"concurrent_requests,omitempty"`
+	ConcurrentRequests *int64         `yaml:"concurrent_requests"`
+	AuthBackoffSecs    *int64         `yaml:"auth_backoff_secs"`
 }
 
 func (sc *SafeConfig) ReloadConfig(configFile string) error {
@@ -60,8 +61,13 @@ func (c *HostConfig) ApplyDefaults() {
 	if c.DisabledMetrics == nil {
 		c.DisabledMetrics = []string{}
 	}
-	if c.ConcurrentRequests == 0 {
-		c.ConcurrentRequests = 128
+	if c.ConcurrentRequests == nil {
+		c.ConcurrentRequests = new(int64)
+		*c.ConcurrentRequests = 128
+	}
+	if c.AuthBackoffSecs == nil {
+		c.AuthBackoffSecs = new(int64)
+		*c.AuthBackoffSecs = 3600
 	}
 }
 

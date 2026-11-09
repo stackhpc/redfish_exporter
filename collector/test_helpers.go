@@ -41,7 +41,7 @@ func CreateStaticBMC(t *testing.T, path string, collect_logs bool) *RedfishColle
 	hostConfig := common.HostConfig{
 		Collectlogs: collect_logs,
 	}
-	require.NoError(t, err)
+	hostConfig.ApplyDefaults()
 
 	collectionCtx, err := common.NewCollectionContext(endpoint, &hostConfig, targetLoggerCtx, collect_logs)
 	require.NoError(t, err)

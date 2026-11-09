@@ -158,6 +158,12 @@ the value should be reduced at the cost of longer scrape times.
 
 This can be done by setting `concurrent_requests` for a group or host.
 
+## Configuring auth backoff
+
+Some BMCs issue IP bans when clients fail to auth. This can cause issues if other services on the same IP need to access the BMC.
+By default, the exporter will not reconnect to a BMC if it failed to connect within the last 60 mins.
+This value can be overridden by setting `auth_backoff_secs` for a group or host.
+
 ## Building
 
 To build the redfish_exporter executable run the command:
