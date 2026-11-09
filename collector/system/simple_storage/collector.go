@@ -14,8 +14,8 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemDeviceLabelNames  = []string{"hostname", "resource", "device"}
-	SimpleStorageLabelNames = []string{"hostname", "resource", "simple_storage"}
+	SystemDeviceLabelNames  = []string{"system", "hostname", "resource", "device"}
+	SimpleStorageLabelNames = []string{"system", "hostname", "resource", "simple_storage"}
 
 	metricMap = createMetricMap()
 )
@@ -92,7 +92,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 			processed[device.Name] = true
 		}
 
-		simpleStorageLabelValues := []string{c.system.HostName, "simple_storage", simpleStorage.Name}
+		simpleStorageLabelValues := []string{c.system.Name, c.system.HostName, "simple_storage", simpleStorage.Name}
 		if healthStatusValue, ok := common.ParseCommonStatusHealth(simpleStorage.Status.Health); ok {
 			ch <- prometheus.MustNewConstMetric(metricMap["system_simple_storage_health_state"].Desc, prometheus.GaugeValue, healthStatusValue, simpleStorageLabelValues...)
 		}
@@ -105,7 +105,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *Collector) parseDevice(ch chan<- prometheus.Metric, device schemas.Device) {
-	systemDeviceLabelValues := []string{c.system.HostName, "device", device.Name}
+	systemDeviceLabelValues := []string{c.system.Name, c.system.HostName, "device", device.Name}
 	if stateValue, ok := common.ParseCommonStatusState(device.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_simple_storage_device_state"].Desc, prometheus.GaugeValue, stateValue, systemDeviceLabelValues...)
 	}

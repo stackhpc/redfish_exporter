@@ -25,14 +25,14 @@ func TestPublicRackmount1_2026_2(t *testing.T) {
 
 	collector := simple_storage.NewCollector(&ctx, logger, systems[0])
 	expected := `
-		redfish_system_simple_storage_device_health_state{device="SATA Bay 1",hostname="web483",resource="device"} 1
-       	redfish_system_simple_storage_device_health_state{device="SATA Bay 2",hostname="web483",resource="device"} 2
-       	redfish_system_simple_storage_device_state{device="SATA Bay 1",hostname="web483",resource="device"} 1
-       	redfish_system_simple_storage_device_state{device="SATA Bay 2",hostname="web483",resource="device"} 1
-       	redfish_system_simple_storage_device_state{device="SATA Bay 3",hostname="web483",resource="device"} 7
-       	redfish_system_simple_storage_device_state{device="SATA Bay 4",hostname="web483",resource="device"} 7
-       	redfish_system_simple_storage_health_rollup{hostname="web483",resource="simple_storage",simple_storage="Simple Storage Controller"} 2
-       	redfish_system_simple_storage_health_state{hostname="web483",resource="simple_storage",simple_storage="Simple Storage Controller"} 1
+		redfish_system_simple_storage_device_health_state{device="SATA Bay 1",hostname="web483",resource="device",system="WebFrontEnd483"} 1
+       	redfish_system_simple_storage_device_health_state{device="SATA Bay 2",hostname="web483",resource="device",system="WebFrontEnd483"} 2
+       	redfish_system_simple_storage_device_state{device="SATA Bay 1",hostname="web483",resource="device",system="WebFrontEnd483"} 1
+       	redfish_system_simple_storage_device_state{device="SATA Bay 2",hostname="web483",resource="device",system="WebFrontEnd483"} 1
+       	redfish_system_simple_storage_device_state{device="SATA Bay 3",hostname="web483",resource="device",system="WebFrontEnd483"} 7
+       	redfish_system_simple_storage_device_state{device="SATA Bay 4",hostname="web483",resource="device",system="WebFrontEnd483"} 7
+       	redfish_system_simple_storage_health_rollup{hostname="web483",resource="simple_storage",simple_storage="Simple Storage Controller",system="WebFrontEnd483"} 2
+       	redfish_system_simple_storage_health_state{hostname="web483",resource="simple_storage",simple_storage="Simple Storage Controller",system="WebFrontEnd483"} 1
 	`
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_system_simple_storage_device_state",

@@ -14,7 +14,7 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemDriveLabelNames = []string{"hostname", "resource", "drive", "drive_id"}
+	SystemDriveLabelNames = []string{"system", "hostname", "resource", "drive", "drive_id"}
 
 	metricMap = createMetricMap()
 )
@@ -32,22 +32,24 @@ func createMetricMap() map[string]common.Metric {
 
 // Implements the prometheus.Collector.
 type Collector struct {
-	Ctx      *common.CollectionContext
-	Log      *slog.Logger
-	storage  *schemas.Storage
-	hostname *string
+	Ctx        *common.CollectionContext
+	Log        *slog.Logger
+	storage    *schemas.Storage
+	hostname   *string
+	systemName *string
 }
 
 // NewCollector returns a collector that collects storage volume data
-func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *schemas.Storage, hostname *string) *Collector {
+func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *schemas.Storage, hostname *string, systemName *string) *Collector {
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
 			"collector", "system.storage.drives",
 			"storage", storage.ID,
 		),
-		storage:  storage,
-		hostname: hostname,
+		storage:    storage,
+		hostname:   hostname,
+		systemName: systemName,
 	}
 }
 
@@ -76,14 +78,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 	wg := &sync.WaitGroup{}
 	for _, drive := range drives {
-		wg.Go(func() { parseDrive(ch, *c.hostname, drive) })
+		wg.Go(func() { c.parseDrive(ch, drive) })
 	}
 	wg.Wait()
 	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
-func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schemas.Drive) {
-	systemdriveLabelValues := []string{systemHostName, "drive", drive.Name, drive.ID}
+func (c *Collector) parseDrive(ch chan<- prometheus.Metric, drive *schemas.Drive) {
+	systemdriveLabelValues := []string{*c.systemName, *c.hostname, "drive", drive.Name, drive.ID}
 	if driveStateValue, ok := common.ParseCommonStatusState(drive.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_storage_drive_state"].Desc, prometheus.GaugeValue, driveStateValue, systemdriveLabelValues...)
 	}

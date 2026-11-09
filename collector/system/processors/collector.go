@@ -14,7 +14,7 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemProcessorLabelNames = []string{"hostname", "resource", "processor", "processor_id"}
+	SystemProcessorLabelNames = []string{"system", "hostname", "resource", "processor", "processor_id"}
 
 	metricMap = createMetricMap()
 )
@@ -77,14 +77,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 	wg := &sync.WaitGroup{}
 	for _, processor := range processors {
-		wg.Go(func() { parseProcessor(ch, c.system.HostName, processor) })
+		wg.Go(func() { c.parseProcessor(ch, processor) })
 	}
 	wg.Wait()
 	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
-func parseProcessor(ch chan<- prometheus.Metric, systemHostName string, processor *schemas.Processor) {
-	systemProcessorLabelValues := []string{systemHostName, "processor", processor.Name, processor.ID}
+func (c *Collector) parseProcessor(ch chan<- prometheus.Metric, processor *schemas.Processor) {
+	systemProcessorLabelValues := []string{c.system.Name, c.system.HostName, "processor", processor.Name, processor.ID}
 
 	if processorStateValue, ok := common.ParseCommonStatusState(processor.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_processor_state"].Desc, prometheus.GaugeValue, processorStateValue, systemProcessorLabelValues...)

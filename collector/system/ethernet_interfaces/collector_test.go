@@ -25,14 +25,14 @@ func TestPublicACD_2026_2(t *testing.T) {
 
 	collector := ethernet_interfaces.NewCollector(&ctx, logger, systems[0])
 	expected := `
-		redfish_system_ethernet_interface_health_state{ethernet_interface="",ethernet_interface_id="SC2KP1F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface"} 1
-       	redfish_system_ethernet_interface_health_state{ethernet_interface="",ethernet_interface_id="SC2KP2F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface"} 1
-       	redfish_system_ethernet_interface_link_enabled{ethernet_interface="",ethernet_interface_id="SC2KP1F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface"} 1
-       	redfish_system_ethernet_interface_link_enabled{ethernet_interface="",ethernet_interface_id="SC2KP2F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface"} 1
-       	redfish_system_ethernet_interface_link_status{ethernet_interface="",ethernet_interface_id="SC2KP1F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface"} 1
-       	redfish_system_ethernet_interface_link_status{ethernet_interface="",ethernet_interface_id="SC2KP2F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface"} 1
-       	redfish_system_ethernet_interface_state{ethernet_interface="",ethernet_interface_id="SC2KP1F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface"} 1
-       	redfish_system_ethernet_interface_state{ethernet_interface="",ethernet_interface_id="SC2KP2F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface"} 1
+		redfish_system_ethernet_interface_health_state{ethernet_interface="",ethernet_interface_id="SC2KP1F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface",system="WebFrontEnd483"} 1
+       	redfish_system_ethernet_interface_health_state{ethernet_interface="",ethernet_interface_id="SC2KP2F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface",system="WebFrontEnd483"} 1
+       	redfish_system_ethernet_interface_link_enabled{ethernet_interface="",ethernet_interface_id="SC2KP1F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface",system="WebFrontEnd483"} 1
+       	redfish_system_ethernet_interface_link_enabled{ethernet_interface="",ethernet_interface_id="SC2KP2F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface",system="WebFrontEnd483"} 1
+       	redfish_system_ethernet_interface_link_status{ethernet_interface="",ethernet_interface_id="SC2KP1F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface",system="WebFrontEnd483"} 1
+       	redfish_system_ethernet_interface_link_status{ethernet_interface="",ethernet_interface_id="SC2KP2F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface",system="WebFrontEnd483"} 1
+       	redfish_system_ethernet_interface_state{ethernet_interface="",ethernet_interface_id="SC2KP1F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface",system="WebFrontEnd483"} 1
+       	redfish_system_ethernet_interface_state{ethernet_interface="",ethernet_interface_id="SC2KP2F0",ethernet_interface_speed="1000 Mbps",hostname="web483",resource="ethernet_interface",system="WebFrontEnd483"} 1
 	`
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_system_ethernet_interface_state",

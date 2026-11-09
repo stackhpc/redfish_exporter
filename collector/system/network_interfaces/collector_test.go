@@ -25,8 +25,8 @@ func TestPublicACD_2026_2(t *testing.T) {
 
 	collector := network_interfaces.NewCollector(&ctx, logger, systems[0])
 	expected := `
-       	redfish_system_network_interface_health_rollup{hostname="web483",network_interface="E810 Network Interface",network_interface_id="SCFCP1F0",resource="network_interface"} 1
-       	redfish_system_network_interface_state{hostname="web483",network_interface="E810 Network Interface",network_interface_id="SCFCP1F0",resource="network_interface"} 1
+		redfish_system_network_interface_health_rollup{hostname="web483",network_interface="E810 Network Interface",network_interface_id="SCFCP1F0",resource="network_interface",system="WebFrontEnd483"} 1
+       	redfish_system_network_interface_state{hostname="web483",network_interface="E810 Network Interface",network_interface_id="SCFCP1F0",resource="network_interface",system="WebFrontEnd483"} 1
 	`
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_system_network_interface_state",

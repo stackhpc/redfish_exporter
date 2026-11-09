@@ -14,7 +14,7 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemNetworkInterfaceLabelNames = []string{"hostname", "resource", "network_interface", "network_interface_id"}
+	SystemNetworkInterfaceLabelNames = []string{"system", "hostname", "resource", "network_interface", "network_interface_id"}
 
 	metricMap = createMetricMap()
 )
@@ -80,7 +80,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *Collector) parseNetworkInterface(ch chan<- prometheus.Metric, networkInterface *schemas.NetworkInterface) {
-	systemNetworkInterfaceLabelValues := []string{c.system.HostName, "network_interface", networkInterface.Name, networkInterface.ID}
+	systemNetworkInterfaceLabelValues := []string{c.system.Name, c.system.HostName, "network_interface", networkInterface.Name, networkInterface.ID}
 
 	if stateValue, ok := common.ParseCommonStatusState(networkInterface.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_network_interface_state"].Desc, prometheus.GaugeValue, stateValue, systemNetworkInterfaceLabelValues...)

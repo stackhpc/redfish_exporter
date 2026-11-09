@@ -14,7 +14,7 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemPCIeDeviceLabelNames = []string{"hostname", "resource", "pcie_device", "pcie_device_id", "pcie_device_partnumber", "pcie_device_type", "pcie_serial_number"}
+	SystemPCIeDeviceLabelNames = []string{"system", "hostname", "resource", "pcie_device", "pcie_device_id", "pcie_device_partnumber", "pcie_device_type", "pcie_serial_number"}
 
 	metricMap = createMetricMap()
 )
@@ -89,7 +89,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *Collector) parsePcieDevice(ch chan<- prometheus.Metric, pcieDevice *schemas.PCIeDevice) {
 	pcieDeviceType := fmt.Sprint(pcieDevice.DeviceType)
-	systemPCIeDeviceLabelValues := []string{c.system.HostName, "pcie_device", pcieDevice.Name, pcieDevice.ID, pcieDevice.PartNumber, pcieDeviceType, pcieDevice.SerialNumber}
+	systemPCIeDeviceLabelValues := []string{c.system.Name, c.system.HostName, "pcie_device", pcieDevice.Name, pcieDevice.ID, pcieDevice.PartNumber, pcieDeviceType, pcieDevice.SerialNumber}
 
 	if stateValue, ok := common.ParseCommonStatusState(pcieDevice.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_pcie_device_state"].Desc, prometheus.GaugeValue, stateValue, systemPCIeDeviceLabelValues...)

@@ -14,7 +14,7 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemMemoryLabelNames = []string{"hostname", "resource", "memory", "memory_id"}
+	SystemMemoryLabelNames = []string{"system", "hostname", "resource", "memory", "memory_id"}
 
 	metricMap = createMetricMap()
 )
@@ -74,14 +74,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 	wg := &sync.WaitGroup{}
 	for _, memory := range memories {
-		wg.Go(func() { parseMemory(ch, c.system.HostName, memory) })
+		wg.Go(func() { c.parseMemory(ch, memory) })
 	}
 	wg.Wait()
 	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
-func parseMemory(ch chan<- prometheus.Metric, systemHostName string, memory *schemas.Memory) {
-	systemMemoryLabelValues := []string{systemHostName, "memory", memory.Name, memory.ID}
+func (c *Collector) parseMemory(ch chan<- prometheus.Metric, memory *schemas.Memory) {
+	systemMemoryLabelValues := []string{c.system.Name, c.system.HostName, "memory", memory.Name, memory.ID}
 	if stateValue, ok := common.ParseCommonStatusState(memory.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_memory_state"].Desc, prometheus.GaugeValue, stateValue, systemMemoryLabelValues...)
 	}

@@ -15,7 +15,7 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemEthernetInterfaceLabelNames = []string{"hostname", "resource", "ethernet_interface", "ethernet_interface_id", "ethernet_interface_speed"}
+	SystemEthernetInterfaceLabelNames = []string{"system", "hostname", "resource", "ethernet_interface", "ethernet_interface_id", "ethernet_interface_speed"}
 
 	metricMap = createMetricMap()
 )
@@ -84,7 +84,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 func (c *Collector) parseEthernetInterface(ch chan<- prometheus.Metric, ethernetInterface *schemas.EthernetInterface) {
 	ethernetInterfaceSpeed := fmt.Sprintf("%d Mbps", *ethernetInterface.SpeedMbps)
-	systemEthernetInterfaceLabelValues := []string{c.system.HostName, "ethernet_interface", ethernetInterface.Name, ethernetInterface.ID, ethernetInterfaceSpeed}
+	systemEthernetInterfaceLabelValues := []string{c.system.Name, c.system.HostName, "ethernet_interface", ethernetInterface.Name, ethernetInterface.ID, ethernetInterfaceSpeed}
 	if ethernetInterfaceStateValue, ok := common.ParseCommonStatusState(ethernetInterface.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_ethernet_interface_state"].Desc, prometheus.GaugeValue, ethernetInterfaceStateValue, systemEthernetInterfaceLabelValues...)
 	}
