@@ -25,10 +25,12 @@ func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
 	common.AddToMetricMap(metrics, Subsystem, "network_adapter_state", fmt.Sprintf("chassis network adapter state,%s", common.StateHelp), ChassisNetworkAdapterLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "network_adapter_health_state", fmt.Sprintf("chassis network adapter health state,%s", common.HealthHelp), ChassisNetworkAdapterLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "network_adapter_health_state", fmt.Sprintf("health of network adapter itself: %s", common.HealthHelp), ChassisNetworkAdapterLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "network_adapter_health_rollup", fmt.Sprintf("health of network adapter, considering dependents: %s", common.HealthHelp), ChassisNetworkAdapterLabelNames)
 
 	common.AddToMetricMap(metrics, Subsystem, "network_port_state", fmt.Sprintf("chassis network port state,%s", common.StateHelp), ChassisNetworkPortLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "network_port_health_state", fmt.Sprintf("chassis network port health state,%s", common.HealthHelp), ChassisNetworkPortLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "network_port_health_state", fmt.Sprintf("health of network port itself: %s", common.HealthHelp), ChassisNetworkPortLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "network_port_health_rollup", fmt.Sprintf("health of network port, considering dependents: %s", common.HealthHelp), ChassisNetworkPortLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "network_port_link_state", fmt.Sprintf("chassis network port link state state,%s", common.PortLinkHelp), ChassisNetworkPortLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "network_port_link_speed_gbps", fmt.Sprintf("chassis network port link speed in gbps"), ChassisNetworkPortLabelNames)
 
@@ -92,6 +94,9 @@ func (c *Collector) collectNetworkAdapter(ch chan<- prometheus.Metric, networkAd
 	}
 	if networkAdapterHealthStateValue, ok := common.ParseCommonStatusHealth(networkAdapter.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_adapter_health_state"].Desc, prometheus.GaugeValue, networkAdapterHealthStateValue, chassisNetworkAdapterLabelValues...)
+	}
+	if healthRollupValue, ok := common.ParseCommonStatusHealth(networkAdapter.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_adapter_health_rollup"].Desc, prometheus.GaugeValue, healthRollupValue, chassisNetworkAdapterLabelValues...)
 	}
 
 	wg := &sync.WaitGroup{}
@@ -172,6 +177,9 @@ func (c *Collector) parseNetworkPort(ch chan<- prometheus.Metric, networkPort *s
 	if healthStatus, ok := common.ParseCommonStatusHealth(networkPort.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_health_state"].Desc, prometheus.GaugeValue, healthStatus, chassisNetworkPortLabelValues...)
 	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(networkPort.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, chassisNetworkPortLabelValues...)
+	}
 }
 
 func (c *Collector) parsePort(ch chan<- prometheus.Metric, port *schemas.Port, networkAdapterName string, networkAdapterID string) {
@@ -193,5 +201,8 @@ func (c *Collector) parsePort(ch chan<- prometheus.Metric, port *schemas.Port, n
 
 	if healthStatus, ok := common.ParseCommonStatusHealth(port.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_health_state"].Desc, prometheus.GaugeValue, healthStatus, chassisNetworkPortLabelValues...)
+	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(port.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_network_port_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, chassisNetworkPortLabelValues...)
 	}
 }

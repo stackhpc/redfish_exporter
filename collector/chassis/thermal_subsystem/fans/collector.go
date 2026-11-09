@@ -81,6 +81,9 @@ func parseFan(ch chan<- prometheus.Metric, chassisID *string, chassisFan *schema
 	if chassisFanStatusHealthValue, ok := common.ParseCommonStatusHealth(chassisFan.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(thermal_common.MetricMap["chassis_fan_health"].Desc, prometheus.GaugeValue, chassisFanStatusHealthValue, chassisFanLabelvalues...)
 	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(chassisFan.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(thermal_common.MetricMap["chassis_fan_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, chassisFanLabelvalues...)
+	}
 
 	if chassisFanStatusStateValue, ok := common.ParseCommonStatusState(chassisFan.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(thermal_common.MetricMap["chassis_fan_state"].Desc, prometheus.GaugeValue, chassisFanStatusStateValue, chassisFanLabelvalues...)

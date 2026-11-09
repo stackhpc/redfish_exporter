@@ -23,7 +23,8 @@ func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
 	common.AddToMetricMap(metrics, Subsystem, "storage_volume_state", fmt.Sprintf("system storage volume state,%s", common.StateHelp), SystemVolumeLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "storage_volume_health_state", fmt.Sprintf("system storage volume health state,%s", common.HealthHelp), SystemVolumeLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "storage_volume_health_state", fmt.Sprintf("health of storage volume itself: %s", common.HealthHelp), SystemVolumeLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "storage_volume_health_rollup", fmt.Sprintf("health of storage volume, considering dependents: %s", common.HealthHelp), SystemVolumeLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "storage_volume_capacity", "system storage volume capacity, Bytes", SystemVolumeLabelNames)
 
 	return metrics
@@ -97,6 +98,10 @@ func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *sch
 	if volumeHealthStateValue, ok := common.ParseCommonStatusHealth(volume.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_storage_volume_health_state"].Desc, prometheus.GaugeValue, volumeHealthStateValue, systemVolumeLabelValues...)
 	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(volume.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_storage_volume_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, systemVolumeLabelValues...)
+	}
+
 	if volume.CapacityBytes != nil {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_storage_volume_capacity"].Desc, prometheus.GaugeValue, float64(*volume.CapacityBytes), systemVolumeLabelValues...)
 	}

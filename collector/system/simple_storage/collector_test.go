@@ -31,9 +31,13 @@ func TestPublicRackmount1_2026_2(t *testing.T) {
        	redfish_system_simple_storage_device_state{device="SATA Bay 2",hostname="web483",resource="device"} 1
        	redfish_system_simple_storage_device_state{device="SATA Bay 3",hostname="web483",resource="device"} 7
        	redfish_system_simple_storage_device_state{device="SATA Bay 4",hostname="web483",resource="device"} 7
+       	redfish_system_simple_storage_health_rollup{hostname="web483",resource="simple_storage",simple_storage="Simple Storage Controller"} 2
+       	redfish_system_simple_storage_health_state{hostname="web483",resource="simple_storage",simple_storage="Simple Storage Controller"} 1
 	`
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_system_simple_storage_device_state",
 		"redfish_system_simple_storage_device_health_state",
+		"redfish_system_simple_storage_health_state",
+		"redfish_system_simple_storage_health_rollup",
 	)
 }

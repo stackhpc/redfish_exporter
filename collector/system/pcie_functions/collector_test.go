@@ -25,6 +25,9 @@ func TestPublicCXL_2026_2(t *testing.T) {
 
 	collector := pcie_functions.NewCollector(&ctx, logger, systems[0])
 	expected := `
+		redfish_system_pcie_function_health_rollup{hostname="",pci_function_deviceclass="MemoryController",pci_function_type="Physical",pcie_function_id="1",pcie_function_name="CXL Function",resource="pcie_function"} 1
+       	redfish_system_pcie_function_health_rollup{hostname="",pci_function_deviceclass="ProcessingAccelerators",pci_function_type="Physical",pcie_function_id="1",pcie_function_name="CXL Function",resource="pcie_function"} 1
+       	redfish_system_pcie_function_health_rollup{hostname="",pci_function_deviceclass="Processor",pci_function_type="Physical",pcie_function_id="1",pcie_function_name="CXL Function",resource="pcie_function"} 1
 		redfish_system_pcie_function_health_state{hostname="",pci_function_deviceclass="MemoryController",pci_function_type="Physical",pcie_function_id="1",pcie_function_name="CXL Function",resource="pcie_function"} 1
        	redfish_system_pcie_function_health_state{hostname="",pci_function_deviceclass="ProcessingAccelerators",pci_function_type="Physical",pcie_function_id="1",pcie_function_name="CXL Function",resource="pcie_function"} 1
        	redfish_system_pcie_function_health_state{hostname="",pci_function_deviceclass="Processor",pci_function_type="Physical",pcie_function_id="1",pcie_function_name="CXL Function",resource="pcie_function"} 1
@@ -35,5 +38,6 @@ func TestPublicCXL_2026_2(t *testing.T) {
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_system_pcie_function_state",
 		"redfish_system_pcie_function_health_state",
+		"redfish_system_pcie_function_health_rollup",
 	)
 }

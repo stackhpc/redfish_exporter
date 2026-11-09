@@ -35,16 +35,19 @@ func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
 	common.AddToMetricMap(metrics, Subsystem, "state", fmt.Sprintf("system state,%s", common.StateHelp), SystemLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "health_state", fmt.Sprintf("system health,%s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "health_state", fmt.Sprintf("health of system itself: %s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "health_rollup", fmt.Sprintf("health of system, considering dependents: %s", common.HealthHelp), SystemLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "power_state", "system power state", SystemLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "bios_info", "system BIOS version, value is always 1", SystemBIOSLabelNames)
 
 	common.AddToMetricMap(metrics, Subsystem, "total_memory_state", fmt.Sprintf("system overall memory state,%s", common.StateHelp), SystemLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "total_memory_health_state", fmt.Sprintf("system overall memory health,%s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "total_memory_health_state", fmt.Sprintf("health of all memory itself: %s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "total_memory_health_rollup", fmt.Sprintf("health of all memory, considering dependents: %s", common.HealthHelp), SystemLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "total_memory_size", "system total memory size, GiB", SystemLabelNames)
 
 	common.AddToMetricMap(metrics, Subsystem, "total_processor_state", fmt.Sprintf("system overall processor state,%s", common.StateHelp), SystemLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "total_processor_health_state", fmt.Sprintf("system overall processor health,%s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "total_processor_health_state", fmt.Sprintf("health of processors themselves overall: %s", common.HealthHelp), SystemLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "total_processor_health_rollup", fmt.Sprintf("health of processors, considering dependents: %s", common.HealthHelp), SystemLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "total_processor_count", "system total processor count", SystemLabelNames)
 
 	common.AddToMetricMap(metrics, Subsystem, "log_service_state", fmt.Sprintf("system log service state,%s", common.StateHelp), SystemLogServiceLabelNames)
@@ -212,15 +215,20 @@ func (c *Collector) collectOverallMetrics(ch chan<- prometheus.Metric, system *s
 	if healthStatusValue, ok := common.ParseCommonStatusHealth(system.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_health_state"].Desc, prometheus.GaugeValue, healthStatusValue, systemLabelValues...)
 	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(system.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, systemLabelValues...)
+	}
 	if stateValue, ok := common.ParseCommonStatusState(system.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_state"].Desc, prometheus.GaugeValue, stateValue, systemLabelValues...)
 	}
+
 	if powerStateValue, ok := common.ParseCommonPowerState(system.PowerState); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_power_state"].Desc, prometheus.GaugeValue, powerStateValue, systemLabelValues...)
 	}
 	if system.BiosVersion != "" {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_bios_info"].Desc, prometheus.GaugeValue, 1, append(systemLabelValues, system.BiosVersion)...)
 	}
+
 	if totalProcessorsStateValue, ok := common.ParseCommonStatusState(system.ProcessorSummary.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_total_processor_state"].Desc, prometheus.GaugeValue, totalProcessorsStateValue, systemLabelValues...)
 		if system.ProcessorSummary.Count != nil {
@@ -230,6 +238,10 @@ func (c *Collector) collectOverallMetrics(ch chan<- prometheus.Metric, system *s
 	if totalProcessorsHealthStatusValue, ok := common.ParseCommonStatusHealth(system.ProcessorSummary.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_total_processor_health_state"].Desc, prometheus.GaugeValue, totalProcessorsHealthStatusValue, systemLabelValues...)
 	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(system.ProcessorSummary.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_total_processor_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, systemLabelValues...)
+	}
+
 	if totalMemoryStateValue, ok := common.ParseCommonStatusState(system.MemorySummary.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_total_memory_state"].Desc, prometheus.GaugeValue, totalMemoryStateValue, systemLabelValues...)
 		if system.MemorySummary.TotalSystemMemoryGiB != nil {
@@ -238,6 +250,9 @@ func (c *Collector) collectOverallMetrics(ch chan<- prometheus.Metric, system *s
 	}
 	if totalMemoryHealthStatusValue, ok := common.ParseCommonStatusHealth(system.MemorySummary.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_total_memory_health_state"].Desc, prometheus.GaugeValue, totalMemoryHealthStatusValue, systemLabelValues...)
+	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(system.MemorySummary.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_total_memory_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, systemLabelValues...)
 	}
 }
 

@@ -23,7 +23,8 @@ func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
 	common.AddToMetricMap(metrics, Subsystem, "processor_state", fmt.Sprintf("system processor state,%s", common.StateHelp), SystemProcessorLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "processor_health_state", fmt.Sprintf("system processor health state,%s", common.HealthHelp), SystemProcessorLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "processor_health_state", fmt.Sprintf("health of processor itself: %s", common.HealthHelp), SystemProcessorLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "processor_health_rollup", fmt.Sprintf("health of processor, considering dependents: %s", common.HealthHelp), SystemProcessorLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "processor_total_threads", "system processor total threads", SystemProcessorLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "processor_total_threads_enabled", "system processor total enabled threads", SystemProcessorLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "processor_total_cores", "system processor total cores", SystemProcessorLabelNames)
@@ -91,6 +92,10 @@ func parseProcessor(ch chan<- prometheus.Metric, systemHostName string, processo
 	if processorHealthStateValue, ok := common.ParseCommonStatusHealth(processor.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_processor_health_state"].Desc, prometheus.GaugeValue, processorHealthStateValue, systemProcessorLabelValues...)
 	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(processor.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_processor_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, systemProcessorLabelValues...)
+	}
+
 	if processor.TotalThreads != nil {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_processor_total_threads"].Desc, prometheus.GaugeValue, float64(*processor.TotalThreads), systemProcessorLabelValues...)
 	}

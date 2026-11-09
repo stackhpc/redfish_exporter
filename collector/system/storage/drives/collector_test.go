@@ -47,3 +47,30 @@ func TestPublicApplications_2026_2(t *testing.T) {
 		"redfish_system_storage_drive_capacity",
 	)
 }
+
+func TestPublicComposeAction_2026_2(t *testing.T) {
+	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-compose-action")
+
+	systems, err := redfishClient.Service.Systems()
+	require.NoError(t, err)
+
+	storages, err := systems[0].Storage()
+	require.NoError(t, err)
+
+	ctx := common.CollectionContext{
+		RedfishClient: redfishClient,
+	}
+
+	promslogConfig := promslog.Config{}
+	logger := promslog.New(&promslogConfig)
+
+	collector := drives.NewCollector(&ctx, logger, storages[0], &systems[0].HostName)
+	expected := `
+		redfish_system_storage_drive_health_rollup{drive="Physical Disk 0:1:0",drive_id="2",hostname="WIN-02GODDHDJTC",resource="drive"} 1
+       	redfish_system_storage_drive_health_rollup{drive="Physical Disk 3:0",drive_id="1",hostname="WIN-02GODDHDJTC",resource="drive"} 1
+       	redfish_system_storage_drive_health_rollup{drive="Physical Disk 4:0",drive_id="3",hostname="WIN-02GODDHDJTC",resource="drive"} 1
+	`
+	redfish_test.CollectAndCompare(t, collector, expected,
+		"redfish_system_storage_drive_health_rollup",
+	)
+}

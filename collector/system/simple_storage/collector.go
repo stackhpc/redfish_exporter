@@ -14,7 +14,8 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemDeviceLabelNames = []string{"hostname", "resource", "device"}
+	SystemDeviceLabelNames  = []string{"hostname", "resource", "device"}
+	SimpleStorageLabelNames = []string{"hostname", "resource", "simple_storage"}
 
 	metricMap = createMetricMap()
 )
@@ -22,8 +23,11 @@ var (
 func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
+	common.AddToMetricMap(metrics, Subsystem, "simple_storage_health_state", fmt.Sprintf("health of simple storage itself: %s", common.HealthHelp), SimpleStorageLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "simple_storage_health_rollup", fmt.Sprintf("health of simple storage, considering dependents: %s", common.HealthHelp), SimpleStorageLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "simple_storage_device_state", fmt.Sprintf("system simple storage device state,%s", common.StateHelp), SystemDeviceLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "simple_storage_device_health_state", fmt.Sprintf("system simple storage device health state,%s", common.HealthHelp), SystemDeviceLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "simple_storage_device_health_state", fmt.Sprintf("health of simple storage device itself: %s", common.HealthHelp), SystemDeviceLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "simple_storage_device_health_rollup", fmt.Sprintf("health of simple storage device, considering dependents: %s", common.HealthHelp), SystemDeviceLabelNames)
 
 	return metrics
 }
@@ -87,6 +91,14 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 			wg.Go(func() { c.parseDevice(ch, device) })
 			processed[device.Name] = true
 		}
+
+		simpleStorageLabelValues := []string{c.system.HostName, "simple_storage", simpleStorage.Name}
+		if healthStatusValue, ok := common.ParseCommonStatusHealth(simpleStorage.Status.Health); ok {
+			ch <- prometheus.MustNewConstMetric(metricMap["system_simple_storage_health_state"].Desc, prometheus.GaugeValue, healthStatusValue, simpleStorageLabelValues...)
+		}
+		if healthRollup, ok := common.ParseCommonStatusHealth(simpleStorage.Status.HealthRollup); ok {
+			ch <- prometheus.MustNewConstMetric(metricMap["system_simple_storage_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, simpleStorageLabelValues...)
+		}
 	}
 	wg.Wait()
 	c.Log.Debug("collection complete", "duration", time.Since(startTime))
@@ -99,5 +111,8 @@ func (c *Collector) parseDevice(ch chan<- prometheus.Metric, device schemas.Devi
 	}
 	if healthStatusValue, ok := common.ParseCommonStatusHealth(device.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_simple_storage_device_health_state"].Desc, prometheus.GaugeValue, healthStatusValue, systemDeviceLabelValues...)
+	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(device.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_simple_storage_device_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, systemDeviceLabelValues...)
 	}
 }

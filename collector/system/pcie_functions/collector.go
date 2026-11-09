@@ -23,7 +23,8 @@ func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
 	common.AddToMetricMap(metrics, Subsystem, "pcie_function_state", fmt.Sprintf("system pcie function state,%s", common.StateHelp), SystemPCIeFunctionLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "pcie_function_health_state", fmt.Sprintf("system pcie device function state,%s", common.HealthHelp), SystemPCIeFunctionLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "pcie_function_health_state", fmt.Sprintf("health of pcie function itself: %s", common.HealthHelp), SystemPCIeFunctionLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "pcie_function_health_rollup", fmt.Sprintf("health of pcie function, considering dependents: %s", common.HealthHelp), SystemPCIeFunctionLabelNames)
 
 	return metrics
 }
@@ -90,5 +91,8 @@ func (c *Collector) parsePcieFunction(ch chan<- prometheus.Metric, pcieFunction 
 
 	if pciFunctionHealthStateValue, ok := common.ParseCommonStatusHealth(pcieFunction.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_pcie_function_health_state"].Desc, prometheus.GaugeValue, pciFunctionHealthStateValue, systemPCIeFunctionLabelLabelValues...)
+	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(pcieFunction.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_pcie_function_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, systemPCIeFunctionLabelLabelValues...)
 	}
 }
