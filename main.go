@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"sync"
 	"syscall"
+	"time"
 
 	kingpin "github.com/alecthomas/kingpin/v2"
 	"github.com/prometheus/client_golang/prometheus"
@@ -47,8 +48,11 @@ var (
 )
 
 type TargetState struct {
-	gatherers prometheus.Gatherers
+	gatherers *prometheus.Gatherers
 	context   *common.CollectionContext
+	// If above zero, the unix epoch time in seconds after which we can retry creating a session.
+	// If zero, there is no backoff time.
+	authBackoffEndTime int64
 }
 
 type StringKeyLock struct {
@@ -158,16 +162,35 @@ func metricsHandler() http.HandlerFunc {
 			return
 		}
 
+		targetLoggerCtx := rootLoggerCtx.With("target", target)
+
 		// Prevents two scrapes for same target at the same time creating multiple clients
 		targetStatesMu.Lock(target)
-		state, ok := targetStates[target]
+		state, exists := targetStates[target]
 
-		targetLoggerCtx := rootLoggerCtx.With("target", target)
+		if !exists {
+			state = TargetState{
+				gatherers:          nil,
+				context:            nil,
+				authBackoffEndTime: 0,
+			}
+			targetStates[target] = state
+		}
+
+		now := time.Now().Unix()
+		if state.authBackoffEndTime > now {
+			targetLoggerCtx.Error("Not creating new client, since last attempt had invalid credentials.", "retry_in_secs", state.authBackoffEndTime-now)
+			http.Error(w, fmt.Sprintf("In login backoff due to invalid Redfish authentication attempt. Retrying in %d secs", state.authBackoffEndTime-now), 401)
+			targetStatesMu.Unlock(target)
+			return
+		}
+
+		createNewClient := state.context == nil
 		if state.context != nil && state.context.CredsInvalid {
 			targetLoggerCtx.Info("Creds invalid, creating new client")
-			ok = false
+			createNewClient = true
 		}
-		if !ok {
+		if createNewClient {
 			targetLoggerCtx.Info("Creating new client")
 
 			var (
@@ -211,20 +234,30 @@ func metricsHandler() http.HandlerFunc {
 			}
 
 			collectionCtx, err := common.NewCollectionContext(target, hostConfig, targetLoggerCtx, collectLogs)
-			if err != nil {
+			if err != nil && common.ErrorIsAccessDenied(err) {
+				targetLoggerCtx.Error("Attempted to login to Redfish node, but credentials were incorrect. Entering auth backoff for 60 minutes.")
+				state.authBackoffEndTime = time.Now().Unix() + 3600
+				targetStates[target] = state
+				targetStatesMu.Unlock(target)
+				http.Error(w, "Attempted to login to Redfish node, but credentials were incorrect. Entering auth backoff for 60 minutes.", 401)
+				return
+			} else if err != nil {
 				targetLoggerCtx.Error("error creating collection context", "err", err)
+				http.Error(w, fmt.Sprintf("Error creating Redfish client: %s", err), 502)
 				targetStatesMu.Unlock(target)
 				return
 			}
+
 			collector := collector.NewRedfishCollector(collectionCtx, targetLoggerCtx)
 			registry := prometheus.NewPedanticRegistry()
 			registry.MustRegister(collector)
 			state = TargetState{
-				gatherers: prometheus.Gatherers{
+				gatherers: &prometheus.Gatherers{
 					prometheus.DefaultGatherer,
 					registry,
 				},
-				context: collectionCtx,
+				context:            collectionCtx,
+				authBackoffEndTime: 0,
 			}
 			targetStates[target] = state
 		} else {
