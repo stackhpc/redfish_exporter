@@ -303,7 +303,9 @@ func main() {
 				}
 				targetStatesMu.LockAll()
 				for k := range targetStates {
-					targetStates[k].context.RedfishClient.Logout()
+					if targetStates[k].context != nil {
+						targetStates[k].context.RedfishClient.Logout()
+					}
 					delete(targetStates, k)
 				}
 				targetStatesMu.UnlockAll()
@@ -316,7 +318,9 @@ func main() {
 				}
 				targetStatesMu.LockAll()
 				for k := range targetStates {
-					targetStates[k].context.RedfishClient.Logout()
+					if targetStates[k].context != nil {
+						targetStates[k].context.RedfishClient.Logout()
+					}
 					delete(targetStates, k)
 				}
 				targetStatesMu.UnlockAll()
