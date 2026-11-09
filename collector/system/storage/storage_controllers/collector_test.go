@@ -26,10 +26,10 @@ func TestPublicLocalStorage_2026_2(t *testing.T) {
 	promslogConfig := promslog.Config{}
 	logger := promslog.New(&promslogConfig)
 
-	collector := storage_controllers.NewCollector(&ctx, logger, storages[0], &systems[0].HostName)
+	collector := storage_controllers.NewCollector(&ctx, logger, storages[0], &systems[0].HostName, &systems[0].Name)
 	expected := `
-		redfish_system_storage_controller_health_state{hostname="web483",resource="storage_controller",storage_controller="Contoso Integrated RAID",storage_controller_id="/redfish/v1/Systems/437XR1138R2/Storage/1#/StorageControllers/0"} 1
-       	redfish_system_storage_controller_state{hostname="web483",resource="storage_controller",storage_controller="Contoso Integrated RAID",storage_controller_id="/redfish/v1/Systems/437XR1138R2/Storage/1#/StorageControllers/0"} 1
+		redfish_system_storage_controller_health_state{hostname="web483",resource="storage_controller",storage_controller="Contoso Integrated RAID",storage_controller_id="/redfish/v1/Systems/437XR1138R2/Storage/1#/StorageControllers/0",system="WebFrontEnd483"} 1
+       	redfish_system_storage_controller_state{hostname="web483",resource="storage_controller",storage_controller="Contoso Integrated RAID",storage_controller_id="/redfish/v1/Systems/437XR1138R2/Storage/1#/StorageControllers/0",system="WebFrontEnd483"} 1
 	`
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_system_storage_controller_state",

@@ -28,17 +28,17 @@ func TestPublicLocalStorage_2026_2(t *testing.T) {
 
 	volumeDeduplicator := volumes.NewVolumeDeduplicator()
 
-	collector := volumes.NewCollector(&ctx, logger, storages[0], &systems[0].HostName, &volumeDeduplicator)
+	collector := volumes.NewCollector(&ctx, logger, storages[0], &systems[0].HostName, &systems[0].Name, &volumeDeduplicator)
 	expected := `
-		redfish_system_storage_volume_capacity{hostname="web483",resource="volume",volume="Virtual Disk 1",volume_id="1"} 8.99527000064e+11
-       	redfish_system_storage_volume_capacity{hostname="web483",resource="volume",volume="Virtual Disk 2",volume_id="2"} 1.073741824e+11
-       	redfish_system_storage_volume_capacity{hostname="web483",resource="volume",volume="Virtual Disk 3",volume_id="3"} 1.073741824e+11
-       	redfish_system_storage_volume_health_state{hostname="web483",resource="volume",volume="Virtual Disk 1",volume_id="1"} 1
-       	redfish_system_storage_volume_health_state{hostname="web483",resource="volume",volume="Virtual Disk 2",volume_id="2"} 1
-       	redfish_system_storage_volume_health_state{hostname="web483",resource="volume",volume="Virtual Disk 3",volume_id="3"} 1
-       	redfish_system_storage_volume_state{hostname="web483",resource="volume",volume="Virtual Disk 1",volume_id="1"} 1
-       	redfish_system_storage_volume_state{hostname="web483",resource="volume",volume="Virtual Disk 2",volume_id="2"} 1
-       	redfish_system_storage_volume_state{hostname="web483",resource="volume",volume="Virtual Disk 3",volume_id="3"} 1
+		redfish_system_storage_volume_capacity{hostname="web483",resource="volume",system="WebFrontEnd483",volume="Virtual Disk 1",volume_id="1"} 8.99527000064e+11
+       	redfish_system_storage_volume_capacity{hostname="web483",resource="volume",system="WebFrontEnd483",volume="Virtual Disk 2",volume_id="2"} 1.073741824e+11
+       	redfish_system_storage_volume_capacity{hostname="web483",resource="volume",system="WebFrontEnd483",volume="Virtual Disk 3",volume_id="3"} 1.073741824e+11
+       	redfish_system_storage_volume_health_state{hostname="web483",resource="volume",system="WebFrontEnd483",volume="Virtual Disk 1",volume_id="1"} 1
+       	redfish_system_storage_volume_health_state{hostname="web483",resource="volume",system="WebFrontEnd483",volume="Virtual Disk 2",volume_id="2"} 1
+       	redfish_system_storage_volume_health_state{hostname="web483",resource="volume",system="WebFrontEnd483",volume="Virtual Disk 3",volume_id="3"} 1
+       	redfish_system_storage_volume_state{hostname="web483",resource="volume",system="WebFrontEnd483",volume="Virtual Disk 1",volume_id="1"} 1
+       	redfish_system_storage_volume_state{hostname="web483",resource="volume",system="WebFrontEnd483",volume="Virtual Disk 2",volume_id="2"} 1
+       	redfish_system_storage_volume_state{hostname="web483",resource="volume",system="WebFrontEnd483",volume="Virtual Disk 3",volume_id="3"} 1
 	`
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_system_storage_volume_state",

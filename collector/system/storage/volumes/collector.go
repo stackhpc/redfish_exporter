@@ -14,7 +14,7 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemVolumeLabelNames = []string{"hostname", "resource", "volume", "volume_id"}
+	SystemVolumeLabelNames = []string{"system", "hostname", "resource", "volume", "volume_id"}
 
 	metricMap = createMetricMap()
 )
@@ -36,11 +36,12 @@ type Collector struct {
 	Log                *slog.Logger
 	storage            *schemas.Storage
 	hostname           *string
+	systemName         *string
 	volumeDeduplicator *VolumeDeduplicator
 }
 
 // NewCollector returns a collector that collects storage volume data
-func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *schemas.Storage, hostname *string, volumeDeduplicator *VolumeDeduplicator) *Collector {
+func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *schemas.Storage, hostname *string, systemName *string, volumeDeduplicator *VolumeDeduplicator) *Collector {
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
@@ -49,6 +50,7 @@ func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *s
 		),
 		storage:            storage,
 		hostname:           hostname,
+		systemName:         systemName,
 		volumeDeduplicator: volumeDeduplicator,
 	}
 }
@@ -76,7 +78,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	wg := &sync.WaitGroup{}
 	for _, volume := range volumes {
 		if c.volumeDeduplicator.SetVolumeIsSeen(volume) {
-			wg.Go(func() { parseVolume(ch, *c.hostname, volume) })
+			wg.Go(func() { c.parseVolume(ch, volume) })
 		} else {
 			c.Log.With("operation",
 				"system.Storage()").Info(fmt.Sprintf("Ignoring "+
@@ -90,8 +92,8 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 	c.Log.Debug("collection complete", "duration", time.Since(startTime))
 }
 
-func parseVolume(ch chan<- prometheus.Metric, systemHostName string, volume *schemas.Volume) {
-	systemVolumeLabelValues := []string{systemHostName, "volume", volume.Name, volume.ID}
+func (c *Collector) parseVolume(ch chan<- prometheus.Metric, volume *schemas.Volume) {
+	systemVolumeLabelValues := []string{*c.systemName, *c.hostname, "volume", volume.Name, volume.ID}
 	if volumeStateValue, ok := common.ParseCommonStatusState(volume.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_storage_volume_state"].Desc, prometheus.GaugeValue, volumeStateValue, systemVolumeLabelValues...)
 	}

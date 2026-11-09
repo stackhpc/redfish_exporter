@@ -25,44 +25,44 @@ func TestPublicTower_2026_2(t *testing.T) {
 
 	collector := processors.NewCollector(&ctx, logger, systems[0])
 	expected := `
-		redfish_system_processor_health_state{hostname="devrender2",processor="GPU1",processor_id="GPU1",resource="processor"} 1
-       	redfish_system_processor_health_state{hostname="devrender2",processor="GPU2",processor_id="GPU2",resource="processor"} 1
-       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU1",resource="processor"} 1
-       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU2",resource="processor"} 1
-       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU3",resource="processor"} 1
-       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU4",resource="processor"} 1
-       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU5",resource="processor"} 1
-       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU6",resource="processor"} 1
-       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU7",resource="processor"} 1
-       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU8",resource="processor"} 1
-       	redfish_system_processor_state{hostname="devrender2",processor="GPU1",processor_id="GPU1",resource="processor"} 1
-       	redfish_system_processor_state{hostname="devrender2",processor="GPU2",processor_id="GPU2",resource="processor"} 1
-       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU1",resource="processor"} 1
-       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU2",resource="processor"} 1
-       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU3",resource="processor"} 1
-       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU4",resource="processor"} 1
-       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU5",resource="processor"} 1
-       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU6",resource="processor"} 1
-       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU7",resource="processor"} 1
-       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU8",resource="processor"} 1
-       	redfish_system_processor_total_cores{hostname="devrender2",processor="GPU1",processor_id="GPU1",resource="processor"} 576
-       	redfish_system_processor_total_cores{hostname="devrender2",processor="GPU2",processor_id="GPU2",resource="processor"} 576
-       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU1",resource="processor"} 16
-       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU2",resource="processor"} 16
-       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU3",resource="processor"} 16
-       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU4",resource="processor"} 16
-       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU5",resource="processor"} 16
-       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU6",resource="processor"} 16
-       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU7",resource="processor"} 16
-       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU8",resource="processor"} 16
-       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU1",resource="processor"} 32
-       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU2",resource="processor"} 32
-       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU3",resource="processor"} 32
-       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU4",resource="processor"} 32
-       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU5",resource="processor"} 32
-       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU6",resource="processor"} 32
-       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU7",resource="processor"} 32
-       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU8",resource="processor"} 32
+		redfish_system_processor_health_state{hostname="devrender2",processor="GPU1",processor_id="GPU1",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_health_state{hostname="devrender2",processor="GPU2",processor_id="GPU2",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU1",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU2",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU3",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU4",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU5",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU6",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU7",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_health_state{hostname="devrender2",processor="Processor",processor_id="CPU8",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_state{hostname="devrender2",processor="GPU1",processor_id="GPU1",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_state{hostname="devrender2",processor="GPU2",processor_id="GPU2",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU1",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU2",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU3",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU4",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU5",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU6",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU7",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_state{hostname="devrender2",processor="Processor",processor_id="CPU8",resource="processor",system="Dev-Render-2"} 1
+       	redfish_system_processor_total_cores{hostname="devrender2",processor="GPU1",processor_id="GPU1",resource="processor",system="Dev-Render-2"} 576
+       	redfish_system_processor_total_cores{hostname="devrender2",processor="GPU2",processor_id="GPU2",resource="processor",system="Dev-Render-2"} 576
+       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU1",resource="processor",system="Dev-Render-2"} 16
+       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU2",resource="processor",system="Dev-Render-2"} 16
+       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU3",resource="processor",system="Dev-Render-2"} 16
+       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU4",resource="processor",system="Dev-Render-2"} 16
+       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU5",resource="processor",system="Dev-Render-2"} 16
+       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU6",resource="processor",system="Dev-Render-2"} 16
+       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU7",resource="processor",system="Dev-Render-2"} 16
+       	redfish_system_processor_total_cores{hostname="devrender2",processor="Processor",processor_id="CPU8",resource="processor",system="Dev-Render-2"} 16
+       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU1",resource="processor",system="Dev-Render-2"} 32
+       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU2",resource="processor",system="Dev-Render-2"} 32
+       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU3",resource="processor",system="Dev-Render-2"} 32
+       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU4",resource="processor",system="Dev-Render-2"} 32
+       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU5",resource="processor",system="Dev-Render-2"} 32
+       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU6",resource="processor",system="Dev-Render-2"} 32
+       	redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU7",resource="processor",system="Dev-Render-2"} 32
+        redfish_system_processor_total_threads{hostname="devrender2",processor="Processor",processor_id="CPU8",resource="processor",system="Dev-Render-2"} 32
 	`
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_system_processor_state",
@@ -87,7 +87,7 @@ func TestPublicComposeAction_2026_2(t *testing.T) {
 
 	collector := processors.NewCollector(&ctx, logger, systems[0])
 	expected := `
-       	redfish_system_processor_health_rollup{hostname="WIN-02GODDHDJTC",processor="CPU.Socket.1",processor_id="BladeServer-1-CPU1",resource="processor"} 1
+       	redfish_system_processor_health_rollup{hostname="WIN-02GODDHDJTC",processor="CPU.Socket.1",processor_id="BladeServer-1-CPU1",resource="processor",system="Sled-1"} 1
 	`
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_system_processor_health_rollup",

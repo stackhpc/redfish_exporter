@@ -14,7 +14,7 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemPCIeFunctionLabelNames = []string{"hostname", "resource", "pcie_function_name", "pcie_function_id", "pci_function_deviceclass", "pci_function_type"}
+	SystemPCIeFunctionLabelNames = []string{"system", "hostname", "resource", "pcie_function_name", "pcie_function_id", "pci_function_deviceclass", "pci_function_type"}
 
 	metricMap = createMetricMap()
 )
@@ -83,7 +83,7 @@ func (c *Collector) parsePcieFunction(ch chan<- prometheus.Metric, pcieFunction 
 	pciFunctionDeviceclass := fmt.Sprint(pcieFunction.DeviceClass)
 	pciFunctionType := fmt.Sprint(pcieFunction.FunctionType)
 
-	systemPCIeFunctionLabelLabelValues := []string{c.system.HostName, "pcie_function", pcieFunction.Name, pcieFunction.ID, pciFunctionDeviceclass, pciFunctionType}
+	systemPCIeFunctionLabelLabelValues := []string{c.system.Name, c.system.HostName, "pcie_function", pcieFunction.Name, pcieFunction.ID, pciFunctionDeviceclass, pciFunctionType}
 
 	if pciFunctionStateValue, ok := common.ParseCommonStatusState(pcieFunction.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_pcie_function_state"].Desc, prometheus.GaugeValue, pciFunctionStateValue, systemPCIeFunctionLabelLabelValues...)

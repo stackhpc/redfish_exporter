@@ -14,7 +14,7 @@ import (
 var (
 	Subsystem = "system"
 
-	SystemStorageControllerLabelNames = []string{"hostname", "resource", "storage_controller", "storage_controller_id"}
+	SystemStorageControllerLabelNames = []string{"system", "hostname", "resource", "storage_controller", "storage_controller_id"}
 
 	metricMap = createMetricMap()
 )
@@ -31,22 +31,24 @@ func createMetricMap() map[string]common.Metric {
 
 // Implements the prometheus.Collector.
 type Collector struct {
-	Ctx      *common.CollectionContext
-	Log      *slog.Logger
-	storage  *schemas.Storage
-	hostname *string
+	Ctx        *common.CollectionContext
+	Log        *slog.Logger
+	storage    *schemas.Storage
+	hostname   *string
+	systemName *string
 }
 
 // NewCollector returns a collector that collects storage volume data
-func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *schemas.Storage, hostname *string) *Collector {
+func NewCollector(ctx *common.CollectionContext, logger *slog.Logger, storage *schemas.Storage, hostname *string, systemName *string) *Collector {
 	return &Collector{
 		Ctx: ctx,
 		Log: logger.With(
 			"collector", "system.storage.storage_controllers",
 			"storage", storage.ID,
 		),
-		storage:  storage,
-		hostname: hostname,
+		storage:    storage,
+		hostname:   hostname,
+		systemName: systemName,
 	}
 }
 
@@ -82,7 +84,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 }
 
 func (c *Collector) parseController(ch chan<- prometheus.Metric, controller *schemas.StorageController) {
-	controllerLabelValues := []string{*c.hostname, "storage_controller", controller.Name, controller.ODataID}
+	controllerLabelValues := []string{*c.systemName, *c.hostname, "storage_controller", controller.Name, controller.ODataID}
 	if stateValue, ok := common.ParseCommonStatusState(controller.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_storage_controller_state"].Desc, prometheus.GaugeValue, stateValue, controllerLabelValues...)
 	}

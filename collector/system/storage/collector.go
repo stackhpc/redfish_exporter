@@ -73,9 +73,9 @@ func (c *Collector) updateChildren(ch chan<- prometheus.Metric, storages []*sche
 		_, exists := c.children[storage.ID]
 		if !exists {
 			child := Children{
-				volumes:             volumes.NewCollector(c.Ctx, c.Log, storage, &c.system.HostName, &c.volumeDeduplicator),
-				drives:              drives.NewCollector(c.Ctx, c.Log, storage, &c.system.HostName),
-				storage_controllers: storage_controllers.NewCollector(c.Ctx, c.Log, storage, &c.system.HostName),
+				volumes:             volumes.NewCollector(c.Ctx, c.Log, storage, &c.system.HostName, &c.system.Name, &c.volumeDeduplicator),
+				drives:              drives.NewCollector(c.Ctx, c.Log, storage, &c.system.HostName, &c.system.Name),
+				storage_controllers: storage_controllers.NewCollector(c.Ctx, c.Log, storage, &c.system.HostName, &c.system.Name),
 			}
 			c.children[storage.ID] = child
 			wg.Go(func() { child.collect(ch) })
