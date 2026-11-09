@@ -20,7 +20,8 @@ func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
 	common.AddToMetricMap(metrics, Subsystem, "power_powersupply_state", fmt.Sprintf("powersupply state of chassis component,%s", common.StateHelp), ChassisPowerSupplyLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "power_powersupply_health", fmt.Sprintf("powersupply health of chassis component,%s", common.HealthHelp), ChassisPowerSupplyLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "power_powersupply_health", fmt.Sprintf("health of power supply itself: %s", common.HealthHelp), ChassisPowerSupplyLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "power_powersupply_health_rollup", fmt.Sprintf("health of power supply, considering dependents: %s", common.HealthHelp), ChassisPowerSupplyLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "power_powersupply_power_efficiency_percentage", "rated efficiency, as a percentage, of the associated power supply on this chassis", ChassisPowerSupplyLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "power_powersupply_last_power_output_watts", "average power output, measured in Watts, of the associated power supply on this chassis", ChassisPowerSupplyLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "power_powersupply_power_input_watts", "measured input power, in Watts, of powersupply on this chassis", ChassisPowerSupplyLabelNames)
@@ -47,6 +48,10 @@ func ParsePowerSupply(ch chan<- prometheus.Metric, chassisID string, powerSupply
 	if chassisPowerInfoPowerSupplyHealthValue, ok := common.ParseCommonStatusHealth(powerSupply.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(MetricMap["chassis_power_powersupply_health"].Desc, prometheus.GaugeValue, chassisPowerInfoPowerSupplyHealthValue, labelValues...)
 	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(powerSupply.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(MetricMap["chassis_power_powersupply_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, labelValues...)
+	}
+
 	if powerSupply.EfficiencyPercent != nil {
 		ch <- prometheus.MustNewConstMetric(MetricMap["chassis_power_powersupply_power_efficiency_percentage"].Desc, prometheus.GaugeValue, float64(*powerSupply.EfficiencyPercent), labelValues...)
 	}

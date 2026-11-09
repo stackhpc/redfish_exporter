@@ -71,3 +71,25 @@ func TestPublicTower_2026_2(t *testing.T) {
 		"redfish_system_processor_total_cores",
 	)
 }
+
+func TestPublicComposeAction_2026_2(t *testing.T) {
+	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-compose-action")
+
+	systems, err := redfishClient.Service.Systems()
+	require.NoError(t, err)
+
+	ctx := common.CollectionContext{
+		RedfishClient: redfishClient,
+	}
+
+	promslogConfig := promslog.Config{}
+	logger := promslog.New(&promslogConfig)
+
+	collector := processors.NewCollector(&ctx, logger, systems[0])
+	expected := `
+       	redfish_system_processor_health_rollup{hostname="WIN-02GODDHDJTC",processor="CPU.Socket.1",processor_id="BladeServer-1-CPU1",resource="processor"} 1
+	`
+	redfish_test.CollectAndCompare(t, collector, expected,
+		"redfish_system_processor_health_rollup",
+	)
+}

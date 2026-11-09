@@ -23,7 +23,8 @@ func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
 	common.AddToMetricMap(metrics, Subsystem, "memory_state", fmt.Sprintf("system memory state,%s", common.StateHelp), SystemMemoryLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "memory_health_state", fmt.Sprintf("system memory health state,%s", common.HealthHelp), SystemMemoryLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "memory_health_state", fmt.Sprintf("health of memory itself: %s", common.HealthHelp), SystemMemoryLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "memory_health_rollup", fmt.Sprintf("health of memory, considering dependents: %s", common.HealthHelp), SystemMemoryLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "memory_capacity", "system memory capacity, MiB", SystemMemoryLabelNames)
 
 	return metrics
@@ -87,6 +88,10 @@ func parseMemory(ch chan<- prometheus.Metric, systemHostName string, memory *sch
 	if healthStatusValue, ok := common.ParseCommonStatusHealth(memory.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_memory_health_state"].Desc, prometheus.GaugeValue, healthStatusValue, systemMemoryLabelValues...)
 	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(memory.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_memory_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, systemMemoryLabelValues...)
+	}
+
 	if memory.CapacityMiB != nil {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_memory_capacity"].Desc, prometheus.GaugeValue, float64(*memory.CapacityMiB), systemMemoryLabelValues...)
 	}

@@ -24,7 +24,8 @@ func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
 	common.AddToMetricMap(metrics, Subsystem, "ethernet_interface_state", fmt.Sprintf("system ethernet interface state,%s", common.StateHelp), SystemEthernetInterfaceLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "ethernet_interface_health_state", fmt.Sprintf("system ethernet interface health state,%s", common.HealthHelp), SystemEthernetInterfaceLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "ethernet_interface_health_state", fmt.Sprintf("health of ethernet interface itself: %s", common.HealthHelp), SystemEthernetInterfaceLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "ethernet_interface_health_rollup", fmt.Sprintf("health of ethernet interface, considering dependents: %s", common.HealthHelp), SystemEthernetInterfaceLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "ethernet_interface_link_status", fmt.Sprintf("system ethernet interface link status,%s", common.LinkHelp), SystemEthernetInterfaceLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "ethernet_interface_link_enabled", "system ethernet interface if the link is enabled", SystemEthernetInterfaceLabelNames)
 
@@ -90,6 +91,10 @@ func (c *Collector) parseEthernetInterface(ch chan<- prometheus.Metric, ethernet
 	if ethernetInterfaceHealthStateValue, ok := common.ParseCommonStatusHealth(ethernetInterface.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_ethernet_interface_health_state"].Desc, prometheus.GaugeValue, ethernetInterfaceHealthStateValue, systemEthernetInterfaceLabelValues...)
 	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(ethernetInterface.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_ethernet_interface_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, systemEthernetInterfaceLabelValues...)
+	}
+
 	if ethernetInterfaceLinkStatusValue, ok := parseLinkStatus(ethernetInterface.LinkStatus); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_ethernet_interface_link_status"].Desc, prometheus.GaugeValue, ethernetInterfaceLinkStatusValue, systemEthernetInterfaceLabelValues...)
 	}

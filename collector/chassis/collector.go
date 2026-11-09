@@ -35,7 +35,8 @@ var (
 
 func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
-	common.AddToMetricMap(metrics, ChassisSubsystem, "health", fmt.Sprintf("health of chassis,%s", common.HealthHelp), ChassisLabelNames)
+	common.AddToMetricMap(metrics, ChassisSubsystem, "health", fmt.Sprintf("health of the chassis itself: %s", common.HealthHelp), ChassisLabelNames)
+	common.AddToMetricMap(metrics, ChassisSubsystem, "health_rollup", fmt.Sprintf("health of the chassis, considering dependents: %s", common.HealthHelp), ChassisLabelNames)
 	common.AddToMetricMap(metrics, ChassisSubsystem, "state", fmt.Sprintf("state of chassis,%s", common.StateHelp), ChassisLabelNames)
 	common.AddToMetricMap(metrics, ChassisSubsystem, "model_info", "organization responsible for producing the chassis, the name by which the manufacturer generally refers to the chassis, and a part number and sku assigned by the organization that is responsible for producing or manufacturing the chassis", ChassisModel)
 
@@ -193,6 +194,9 @@ func (c *Collector) collectChassis(ch chan<- prometheus.Metric, chassis *schemas
 	ChassisLabelValues := []string{"chassis", chassis.ID}
 	if chassisStatusHealthValue, ok := common.ParseCommonStatusHealth(chassis.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_health"].Desc, prometheus.GaugeValue, chassisStatusHealthValue, ChassisLabelValues...)
+	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(chassis.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, ChassisLabelValues...)
 	}
 	if chassisStatusStateValue, ok := common.ParseCommonStatusState(chassis.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_state"].Desc, prometheus.GaugeValue, chassisStatusStateValue, ChassisLabelValues...)

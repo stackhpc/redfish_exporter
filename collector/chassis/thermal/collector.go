@@ -30,7 +30,8 @@ func createMetricMap() map[string]common.Metric {
 	common.AddToMetricMap(metrics, Subsystem, "fan_rpm_upper_threshold_fatal", "threshold above the normal range fan RPM or percentage, and is fatal, on this chassis component", thermal_common.FanLabelNames)
 
 	common.AddToMetricMap(metrics, Subsystem, "temperature_sensor_state", fmt.Sprintf("status state of temperature on this chassis component,%s", common.StateHelp), thermal_common.TemperatureLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "temperature_sensor_health", fmt.Sprintf("status health of temperature on this chassis component,%s", common.StateHelp), thermal_common.TemperatureLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "temperature_sensor_health", fmt.Sprintf("health of the temperature sensor itself: %s", common.HealthHelp), thermal_common.TemperatureLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "temperature_sensor_health_rollup", fmt.Sprintf("health of the temperature sensor, considering dependents: %s", common.HealthHelp), thermal_common.TemperatureLabelNames)
 	return metrics
 }
 
@@ -105,6 +106,9 @@ func parseChassisTemperature(ch chan<- prometheus.Metric, chassisID string, chas
 	if chassisTemperatureStatusHealthValue, ok := common.ParseCommonStatusHealth(chassisTemperatureStatusHealth); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["chassis_temperature_sensor_health"].Desc, prometheus.GaugeValue, chassisTemperatureStatusHealthValue, chassisTemperatureLabelvalues...)
 	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(chassisTemperature.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["chassis_temperature_sensor_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, chassisTemperatureLabelvalues...)
+	}
 
 	chassisTemperatureStatusState := chassisTemperatureStatus.State
 	//			chassisTemperatureStatusLabelNames :=[]string{BaseLabelNames,"temperature_sensor_name","temperature_sensor_member_id")
@@ -170,6 +174,9 @@ func parseFan(ch chan<- prometheus.Metric, chassisID *string, chassisFan *schema
 
 	if chassisFanStatusHealthValue, ok := common.ParseCommonStatusHealth(chassisFan.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(thermal_common.MetricMap["chassis_fan_health"].Desc, prometheus.GaugeValue, chassisFanStatusHealthValue, chassisFanLabelvalues...)
+	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(chassisFan.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(thermal_common.MetricMap["chassis_fan_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, chassisFanLabelvalues...)
 	}
 
 	if chassisFanStatusStateValue, ok := common.ParseCommonStatusState(chassisFan.Status.State); ok {

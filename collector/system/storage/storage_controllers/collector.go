@@ -23,7 +23,8 @@ func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
 	common.AddToMetricMap(metrics, Subsystem, "storage_controller_state", fmt.Sprintf("system storage controller state,%s", common.StateHelp), SystemStorageControllerLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "storage_controller_health_state", fmt.Sprintf("system storage controller health state,%s", common.HealthHelp), SystemStorageControllerLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "storage_controller_health_state", fmt.Sprintf("health of storage controller itself: %s", common.HealthHelp), SystemStorageControllerLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "storage_controller_health_rollup", fmt.Sprintf("health of storage controller, considering dependents: %s", common.HealthHelp), SystemStorageControllerLabelNames)
 
 	return metrics
 }
@@ -87,5 +88,8 @@ func (c *Collector) parseController(ch chan<- prometheus.Metric, controller *sch
 	}
 	if healthStatusValue, ok := common.ParseCommonStatusHealth(controller.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_storage_controller_health_state"].Desc, prometheus.GaugeValue, healthStatusValue, controllerLabelValues...)
+	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(controller.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_storage_controller_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, controllerLabelValues...)
 	}
 }

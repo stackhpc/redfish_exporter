@@ -23,7 +23,8 @@ func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
 	common.AddToMetricMap(metrics, Subsystem, "storage_drive_state", fmt.Sprintf("system storage drive state,%s", common.StateHelp), SystemDriveLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "storage_drive_health_state", fmt.Sprintf("system storage drive health state,%s", common.HealthHelp), SystemDriveLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "storage_drive_health_state", fmt.Sprintf("health of storage drive itself: %s", common.HealthHelp), SystemDriveLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "storage_drive_health_rollup", fmt.Sprintf("health of storage drive, considering dependents: %s", common.HealthHelp), SystemDriveLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "storage_drive_capacity", "system storage drive capacity, Bytes", SystemDriveLabelNames)
 
 	return metrics
@@ -89,6 +90,10 @@ func parseDrive(ch chan<- prometheus.Metric, systemHostName string, drive *schem
 	if driveHealthStateValue, ok := common.ParseCommonStatusHealth(drive.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_storage_drive_health_state"].Desc, prometheus.GaugeValue, driveHealthStateValue, systemdriveLabelValues...)
 	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(drive.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_storage_drive_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, systemdriveLabelValues...)
+	}
+
 	if drive.CapacityBytes != nil {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_storage_drive_capacity"].Desc, prometheus.GaugeValue, float64(*drive.CapacityBytes), systemdriveLabelValues...)
 	}

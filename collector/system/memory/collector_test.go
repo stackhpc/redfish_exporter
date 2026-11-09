@@ -80,3 +80,28 @@ func TestPublicTower_2026_2(t *testing.T) {
 		"redfish_system_memory_capacity",
 	)
 }
+
+func TestPublicCXL_2026_2(t *testing.T) {
+	redfishClient := redfish_test.CreateRedfishClient(t, "DSP2043_2026.2/public-cxl")
+
+	systems, err := redfishClient.Service.Systems()
+	require.NoError(t, err)
+
+	ctx := common.CollectionContext{
+		RedfishClient: redfishClient,
+	}
+
+	promslogConfig := promslog.Config{}
+	logger := promslog.New(&promslogConfig)
+
+	collector := memory.NewCollector(&ctx, logger, systems[0])
+	expected := `
+		redfish_system_memory_health_rollup{hostname="",memory="CXL Device memory",memory_id="CXL2",resource="memory"} 1
+       	redfish_system_memory_health_rollup{hostname="",memory="CXL Device memory",memory_id="CXL3",resource="memory"} 1
+       	redfish_system_memory_health_rollup{hostname="",memory="CXL Device memory",memory_id="RCXL2",resource="memory"} 1
+       	redfish_system_memory_health_rollup{hostname="",memory="CXL Device memory",memory_id="RCXL3",resource="memory"} 1
+	`
+	redfish_test.CollectAndCompare(t, collector, expected,
+		"redfish_system_memory_health_rollup",
+	)
+}

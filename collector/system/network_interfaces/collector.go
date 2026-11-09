@@ -23,7 +23,8 @@ func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
 	common.AddToMetricMap(metrics, Subsystem, "network_interface_state", fmt.Sprintf("system network interface state,%s", common.StateHelp), SystemNetworkInterfaceLabelNames)
-	common.AddToMetricMap(metrics, Subsystem, "network_interface_health_state", fmt.Sprintf("system network interface health state,%s", common.HealthHelp), SystemNetworkInterfaceLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "network_interface_health_state", fmt.Sprintf("health of network interface itself: %s", common.HealthHelp), SystemNetworkInterfaceLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "network_interface_health_rollup", fmt.Sprintf("health of network interface, considering dependents: %s", common.HealthHelp), SystemNetworkInterfaceLabelNames)
 
 	return metrics
 }
@@ -86,5 +87,8 @@ func (c *Collector) parseNetworkInterface(ch chan<- prometheus.Metric, networkIn
 	}
 	if healthStatusValue, ok := common.ParseCommonStatusHealth(networkInterface.Status.Health); ok {
 		ch <- prometheus.MustNewConstMetric(metricMap["system_network_interface_health_state"].Desc, prometheus.GaugeValue, healthStatusValue, systemNetworkInterfaceLabelValues...)
+	}
+	if healthRollup, ok := common.ParseCommonStatusHealth(networkInterface.Status.HealthRollup); ok {
+		ch <- prometheus.MustNewConstMetric(metricMap["system_network_interface_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, systemNetworkInterfaceLabelValues...)
 	}
 }

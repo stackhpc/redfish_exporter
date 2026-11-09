@@ -18,7 +18,8 @@ var (
 func createMetricMap() map[string]common.Metric {
 	metrics := make(map[string]common.Metric)
 
-	common.AddToMetricMap(metrics, Subsystem, "fan_health", fmt.Sprintf("fan health on this chassis component,%s", common.HealthHelp), FanLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "fan_health", fmt.Sprintf("health of the fan itself: %s", common.HealthHelp), FanLabelNames)
+	common.AddToMetricMap(metrics, Subsystem, "fan_health_rollup", fmt.Sprintf("health of the fan, considering dependents: %s", common.HealthHelp), FanLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "fan_state", fmt.Sprintf("fan state on this chassis component,%s", common.StateHelp), FanLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "fan_rpm", "fan RPM", FanLabelNames)
 	common.AddToMetricMap(metrics, Subsystem, "fan_rpm_percentage", "fan RPM, as a percentage of the rated RPMs, on this chassis component", FanLabelNames)
