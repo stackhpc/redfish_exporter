@@ -63,7 +63,7 @@ func (c *HostConfig) ApplyDefaults() {
 	}
 	if c.ConcurrentRequests == nil {
 		c.ConcurrentRequests = new(int64)
-		*c.ConcurrentRequests = 128
+		*c.ConcurrentRequests = 16
 	}
 	if c.AuthBackoffSecs == nil {
 		c.AuthBackoffSecs = new(int64)
