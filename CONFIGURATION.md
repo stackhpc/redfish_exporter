@@ -159,17 +159,19 @@ hosts:
 
 ## Configuring current requests
 
-By default, up to 128 HTTP requests can be in-flight to a BMC concurrently.
+By default, up to 16 HTTP requests can be in-flight to a BMC concurrently.
 Some BMCs may be able to handle more, in which case you can increase this value to get faster scrape times.
 Some BMCs may be able to handle less, which will show up in the exporter logs as i/o timeouts. In this case,
 the value should be reduced at the cost of longer scrape times.
+An additional consideration is that a higher concurrent request limit can increase load on the BMC such that requests from other services needing to talk to the BMC can take a very long time to complete (generally not completing until the scrape is over).
+For this reason, it's recommended to set the limit to slightly below the point at which scrape times no longer decrease.
 
 This can be done by setting `concurrent_requests` for a group or host.
 
 ```yaml
 hosts:
   default:
-    concurrent_requests: 32
+    concurrent_requests: 16
 ```
 
 ## Configuring auth backoff
