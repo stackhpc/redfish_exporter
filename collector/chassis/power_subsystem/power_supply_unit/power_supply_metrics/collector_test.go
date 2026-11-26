@@ -31,8 +31,8 @@ func TestPublicACD_2026_2(t *testing.T) {
 
 	collector := power_supply_metrics.NewCollector(&ctx, logger, powerSupplyUnits[0], &chassis[0].ID)
 	expected := `
-		redfish_chassis_power_powersupply_power_input_watts{chassis_id="1U",power_supply="Power Supply Bay 1",power_supply_id="Bay1",resource="power_supply"} 937.4
-       	redfish_chassis_power_powersupply_power_output_watts{chassis_id="1U",power_supply="Power Supply Bay 1",power_supply_id="Bay1",resource="power_supply"} 937.4
+		redfish_chassis_power_powersupply_power_input_watts{chassis_id="1U",power_supply="Power Supply Bay 1",power_supply_id="Bay1",resource="PowerSupply"} 937.4
+       	redfish_chassis_power_powersupply_power_output_watts{chassis_id="1U",power_supply="Power Supply Bay 1",power_supply_id="Bay1",resource="PowerSupply"} 937.4
 	`
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_chassis_power_powersupply_power_input_watts",

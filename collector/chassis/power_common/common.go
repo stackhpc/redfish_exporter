@@ -5,7 +5,6 @@ import (
 
 	"github.com/prometheus/client_golang/prometheus"
 	"github.com/stackhpc/redfish_exporter/common"
-	"github.com/stmcginnis/gofish/schemas"
 )
 
 var (
@@ -37,34 +36,5 @@ func createMetricMap() map[string]common.Metric {
 func Describe(ch chan<- *prometheus.Desc) {
 	for _, metric := range MetricMap {
 		ch <- metric.Desc
-	}
-}
-
-func ParsePowerSupply(ch chan<- prometheus.Metric, chassisID string, powerSupply schemas.PowerSupply) {
-	labelValues := []string{"power_supply", chassisID, powerSupply.Name, powerSupply.MemberID}
-	if chassisPowerInfoPowerSupplyStateValue, ok := common.ParseCommonStatusState(powerSupply.Status.State); ok {
-		ch <- prometheus.MustNewConstMetric(MetricMap["chassis_power_powersupply_state"].Desc, prometheus.GaugeValue, chassisPowerInfoPowerSupplyStateValue, labelValues...)
-	}
-	if chassisPowerInfoPowerSupplyHealthValue, ok := common.ParseCommonStatusHealth(powerSupply.Status.Health); ok {
-		ch <- prometheus.MustNewConstMetric(MetricMap["chassis_power_powersupply_health"].Desc, prometheus.GaugeValue, chassisPowerInfoPowerSupplyHealthValue, labelValues...)
-	}
-	if healthRollup, ok := common.ParseCommonStatusHealth(powerSupply.Status.HealthRollup); ok {
-		ch <- prometheus.MustNewConstMetric(MetricMap["chassis_power_powersupply_health_rollup"].Desc, prometheus.GaugeValue, healthRollup, labelValues...)
-	}
-
-	if powerSupply.EfficiencyPercent != nil {
-		ch <- prometheus.MustNewConstMetric(MetricMap["chassis_power_powersupply_power_efficiency_percentage"].Desc, prometheus.GaugeValue, float64(*powerSupply.EfficiencyPercent), labelValues...)
-	}
-	if powerSupply.LastPowerOutputWatts != nil {
-		ch <- prometheus.MustNewConstMetric(MetricMap["chassis_power_powersupply_last_power_output_watts"].Desc, prometheus.GaugeValue, float64(*powerSupply.LastPowerOutputWatts), labelValues...)
-	}
-	if powerSupply.PowerCapacityWatts != nil {
-		ch <- prometheus.MustNewConstMetric(MetricMap["chassis_power_powersupply_power_capacity_watts"].Desc, prometheus.GaugeValue, float64(*powerSupply.PowerCapacityWatts), labelValues...)
-	}
-	if powerSupply.PowerInputWatts != nil {
-		ch <- prometheus.MustNewConstMetric(MetricMap["chassis_power_powersupply_power_input_watts"].Desc, prometheus.GaugeValue, float64(*powerSupply.PowerInputWatts), labelValues...)
-	}
-	if powerSupply.PowerOutputWatts != nil {
-		ch <- prometheus.MustNewConstMetric(MetricMap["chassis_power_powersupply_power_output_watts"].Desc, prometheus.GaugeValue, float64(*powerSupply.PowerOutputWatts), labelValues...)
 	}
 }
