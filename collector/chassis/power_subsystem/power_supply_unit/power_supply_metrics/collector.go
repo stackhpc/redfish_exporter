@@ -57,7 +57,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 		return
 	}
 
-	labelValues := []string{"power_supply", *c.chassisID, c.powerSupplyUnit.Name, c.powerSupplyUnit.ID}
+	labelValues := []string{"PowerSupply", *c.chassisID, c.powerSupplyUnit.Name, c.powerSupplyUnit.ID}
 
 	if powerSupplyUnitMetrics.InputPowerWatts.Reading != nil {
 		ch <- prometheus.MustNewConstMetric(power_common.MetricMap["chassis_power_powersupply_power_input_watts"].Desc, prometheus.GaugeValue, *powerSupplyUnitMetrics.InputPowerWatts.Reading, labelValues...)

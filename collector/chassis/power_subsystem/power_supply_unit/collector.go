@@ -116,7 +116,7 @@ func (c *Collector) Collect(ch chan<- prometheus.Metric) {
 
 // Collect metrics for the PowerSupplyUnit itself
 func (c *Collector) collectPowerSupplyUnit(ch chan<- prometheus.Metric, powerSupplyUnit *schemas.PowerSupplyUnit) {
-	labelValues := []string{"power_supply", *c.chassisID, powerSupplyUnit.Name, powerSupplyUnit.ID}
+	labelValues := []string{"PowerSupply", *c.chassisID, powerSupplyUnit.Name, powerSupplyUnit.ID}
 	if chassisPowerInfoPowerSupplyStateValue, ok := common.ParseCommonStatusState(powerSupplyUnit.Status.State); ok {
 		ch <- prometheus.MustNewConstMetric(power_common.MetricMap["chassis_power_powersupply_state"].Desc, prometheus.GaugeValue, chassisPowerInfoPowerSupplyStateValue, labelValues...)
 	}

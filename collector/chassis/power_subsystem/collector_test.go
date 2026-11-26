@@ -25,10 +25,10 @@ func TestPublicACD_2026_2(t *testing.T) {
 
 	collector := power_subsystem.NewCollector(&ctx, logger, chassis[0])
 	expected := `
-		redfish_chassis_power_powersupply_health{chassis_id="1U",power_supply="Power Supply Bay 1",power_supply_id="Bay1",resource="power_supply"} 2
-       	redfish_chassis_power_powersupply_power_capacity_watts{chassis_id="1U",power_supply="Power Supply Bay 1",power_supply_id="Bay1",resource="power_supply"} 400
-       	redfish_chassis_power_powersupply_state{chassis_id="1U",power_supply="Power Supply Bay 1",power_supply_id="Bay1",resource="power_supply"} 1
-       	redfish_chassis_power_powersupply_state{chassis_id="1U",power_supply="Power Supply Bay 2",power_supply_id="Bay2",resource="power_supply"} 7
+		redfish_chassis_power_powersupply_health{chassis_id="1U",power_supply="Power Supply Bay 1",power_supply_id="Bay1",resource="PowerSupply"} 2
+       	redfish_chassis_power_powersupply_power_capacity_watts{chassis_id="1U",power_supply="Power Supply Bay 1",power_supply_id="Bay1",resource="PowerSupply"} 400
+       	redfish_chassis_power_powersupply_state{chassis_id="1U",power_supply="Power Supply Bay 1",power_supply_id="Bay1",resource="PowerSupply"} 1
+       	redfish_chassis_power_powersupply_state{chassis_id="1U",power_supply="Power Supply Bay 2",power_supply_id="Bay2",resource="PowerSupply"} 7
 	`
 	redfish_test.CollectAndCompare(t, collector, expected,
 		"redfish_chassis_power_powersupply_state",
